@@ -10,7 +10,7 @@
 
 #include "Qcontainer.h"
 #include "AudioToneGen.h"
-#include <SerialWaveType.h>
+#include "SerialWaveType.h"
 #include "msggenerator.h"
 #include "MorseChar.h"
 #include "keyPress.h"

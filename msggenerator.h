@@ -9,10 +9,10 @@
 #define MSGGENERATOR_H_
 #include <Serial.h>
 #include <stdint.h>
-#include <Qcontainer.h>
+#include "Qcontainer.h"
 #include "AudioToneGen.h"
 #include "SerialWaveType.h"
-#include <CmmdCode.h>
+#include "CmmdCode.h"
 #include "MorseSymbol.h"
 
 class MsgUtil {
