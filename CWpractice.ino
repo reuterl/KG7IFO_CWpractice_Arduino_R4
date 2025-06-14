@@ -14,7 +14,10 @@
 timerHook pTimerHook = NULL;
 
 TriodeGirlDAC TgirlDAC;
+
+// Debug output
 SoftwareSerial SwSerial(2, 3);
+char sSprintf[256];
 
 machinedetat* MDE;
 AudioToneGen* ATGen;
@@ -22,11 +25,7 @@ Qcontainer Queues;
 keyPress* keyPressHandler;
 MorseChar* morseChar;
 
-// todo: figure out how to get this in common with morsesymbol nd morse char
-//bool MorseSymbolDefn::farnsworthSpacing = false;
-
 uint8_t numTones = 8;  // Size of tone table
-char sSprintf[256];
 
 FspTimer NyquistTimer;
 uint8_t gpioOut = 0;

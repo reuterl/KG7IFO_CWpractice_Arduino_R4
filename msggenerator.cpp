@@ -20,6 +20,8 @@ msggenerator::~msggenerator() {
 }
 */
 
+bool g_farnsworthSpacing = false;
+
 uint16_t MsgUtil:: CheckSum(uint8_t * Msg, uint8_t Length){
 	uint16_t calcChecksum = 0;
 	uint8_t idx;

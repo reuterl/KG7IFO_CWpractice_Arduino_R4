@@ -14,10 +14,11 @@
 #include <queue>
 #include "MorseSymbol.h"
 #include "Qcontainer.h"
-// Include the LED_Matrix library
-//#include "Arduino_LED_Matrix.h"
 #include "LEDmatrix.h"
 
+#define SPRINTF(FMT, args...) \
+  sprintf(sSprintf, FMT, args); \
+  Serial.print(sSprintf);
 
 class keyPress : public MorseSymbolDefn, LEDmatrix {
 public:
@@ -36,11 +37,13 @@ public:
 
   typedef struct keyElementToken_st {
     uint32_t Duration;
+    uint32_t tDit;
     keyElement_t Event;
     morseElement_t morseElement;
     uint8_t score;
     uint8_t WPM;
     float tDitUnits;
+    bool processedElement;
   } keyElementToken_t;
 
 
@@ -49,7 +52,6 @@ public:
 
   void keyDebounce(void);
   keyState_t getKeyState(void);
-  bool refreshRingBuffer(void);
 
   void getElement(void);
   void processKeyEntry(void);
@@ -59,6 +61,117 @@ public:
   char* printStrMorseElement(morseElement_t E);
   void calcWPM(morseCharToken_t* pMorseCharToken);
 
+
+  /*-----------------------------------------------------------------*/
+private:
+  Qcontainer* Queues;
+
+  uint32_t keyDiscretePin;
+  uint32_t ledDiscretePin = 13;  // Built-in LED on  Arduino boards
+
+  uint32_t stuckTimeout = 1000U;
+  uint32_t idleTimeout = 2000U;
+
+  const uint32_t debounceInterval = 15U;
+  uint16_t runningWPM;
+  uint16_t maximumWPM;
+  uint16_t WPM;
+  uint16_t timingMorseSpace;
+  uint16_t timingMorseWordSpace;
+  bool haveMark;
+
+  uint16_t TshortestMark, TshortestDahDit;
+  uint16_t currentTdit;
+
+  keyElementToken_t ringBuffer[24];
+  const uint8_t sizeRingBuffer = sizeof(ringBuffer)
+                                 / sizeof(keyElementToken_t);
+  uint8_t headRingBuffer;
+  uint8_t tailRingBuffer;
+  uint8_t countRingBuffer;
+  bool isfullRingBuffer, isMTRingBuffer;
+  void dumpRingBuffer(void);
+
+  bool assignMorseElements(void);
+  //void analyzeRingBuffer(void);
+  bool fillRingBuffer(void);
+  bool resolveElementType(keyElementToken_t* pElementToken);
+  //bool spaceDetect(void);
+
+  inline uint8_t incrRingBuffer(uint8_t idx) {
+    idx++;
+    if (idx >= sizeRingBuffer) {
+      idx = 0;
+    }
+    return idx;
+  }
+
+  inline keyElementToken_t* peekPullRingBuffer(void) {
+    keyElementToken_t* thisEntry;
+    if (isMTRingBuffer == true) {
+      thisEntry = NULL;
+    } else {
+      thisEntry = &ringBuffer[headRingBuffer];
+    }
+    return thisEntry;
+  }
+
+
+  inline keyElementToken_t* pullRingBuffer(void) {
+    keyElementToken_t* thisEntry;
+    if (isMTRingBuffer == true) {
+      thisEntry = NULL;
+    } else {
+      isfullRingBuffer = false;
+      thisEntry = &ringBuffer[headRingBuffer];
+      headRingBuffer = incrRingBuffer(headRingBuffer);
+      countRingBuffer--;
+      if (countRingBuffer == 0) {
+        isMTRingBuffer = true;
+      }
+    }
+    return thisEntry;
+  }
+
+  inline bool unprocessedElementRingBuffer(void) {
+    keyElementToken_t* pElementToken;
+    if (isMTRingBuffer == true) {
+      return false;
+    }
+    countRingBuffer = getCountRingBuffer();
+    for (int idx = 0; idx < countRingBuffer; idx++) {
+      pElementToken = peekRingBuffer(idx);
+      if (pElementToken->processedElement == false) {
+          return true;
+        
+      }
+    }
+    return false;
+  }
+
+  inline keyElementToken_t* pushRingBuffer(keyElementToken_t elementToken) {
+    keyElementToken_t* thisEntry;
+
+    if (isfullRingBuffer == true) {
+      thisEntry = NULL;
+    } else {
+      ringBuffer[tailRingBuffer] = elementToken;
+      elementToken.processedElement = false;
+      elementToken.Duration = 0;
+      elementToken.tDitUnits = 0.0;
+      elementToken.morseElement = morseUnknown;
+
+      thisEntry = &ringBuffer[tailRingBuffer];
+      thisEntry->score = tailRingBuffer;
+      tailRingBuffer = incrRingBuffer(tailRingBuffer);
+      countRingBuffer++;
+      isMTRingBuffer = false;
+      if (countRingBuffer == sizeRingBuffer) {
+        isfullRingBuffer = true;
+      }
+    }
+    return thisEntry;
+  }
   inline keyElementToken_t* peekRingBuffer(uint8_t idx) {
     uint8_t getIdx = headRingBuffer + idx;
     if (getIdx >= sizeRingBuffer) {
@@ -79,82 +192,6 @@ public:
     headRingBuffer = tailRingBuffer = countRingBuffer = 0;
     isMTRingBuffer = true;
     isfullRingBuffer = false;
-  }
-
-  /*-----------------------------------------------------------------*/
-private:
-  Qcontainer* Queues;
-
-  uint32_t keyDiscretePin;
-  uint32_t ledDiscretePin = 13;  // Built-in LED on  Arduino boards
-
-  uint32_t stuckTimeout = 1000U;
-  uint32_t idleTimeout = 2000U;
-  const uint32_t debounceInterval = 10U;
-  uint16_t runningWPM;
-  uint16_t maximumWPM;
-  uint16_t WPM;
-  uint16_t timingMorseSpace;
-  uint16_t timingMorseWordSpace;
-  bool haveMark;
-
-  uint16_t TshortestMark, TshortestDahDit;
-  uint16_t currentTdit;
-
-  keyElementToken_t ringBuffer[24];
-  const uint8_t sizeRingBuffer = sizeof(ringBuffer)
-                                 / sizeof(keyElementToken_t);
-  uint8_t headRingBuffer;
-  uint8_t tailRingBuffer;
-  uint8_t countRingBuffer;
-  bool isfullRingBuffer, isMTRingBuffer;
-
-  void assignMorseElements(void);
-  void analyzeRingBuffer(void);
-  bool fillRingBuffer(void);
-  bool spaceDetect(void);
-
-  inline uint8_t incrRingBuffer(uint8_t idx) {
-    idx++;
-    if (idx >= sizeRingBuffer) {
-      idx = 0;
-    }
-    return idx;
-  }
-
-  inline keyElementToken_t* pullRingBuffer(void) {
-    keyElementToken_t* thisEntry;
-    if (isMTRingBuffer == true) {
-      thisEntry = NULL;
-    } else {
-      isfullRingBuffer = false;
-      thisEntry = &ringBuffer[headRingBuffer];
-      headRingBuffer = incrRingBuffer(headRingBuffer);
-      countRingBuffer--;
-      if (countRingBuffer == 0) {
-        isMTRingBuffer = true;
-      }
-    }
-    return thisEntry;
-  }
-
-  inline keyElementToken_t* pushRingBuffer(keyElementToken_t elementToken) {
-    keyElementToken_t* thisEntry;
-
-    if (isfullRingBuffer == true) {
-      thisEntry = NULL;
-    } else {
-      ringBuffer[tailRingBuffer] = elementToken;
-      thisEntry = &ringBuffer[tailRingBuffer];
-      thisEntry->score = tailRingBuffer;
-      tailRingBuffer = incrRingBuffer(tailRingBuffer);
-      countRingBuffer++;
-      isMTRingBuffer = false;
-      if (countRingBuffer == sizeRingBuffer) {
-        isfullRingBuffer = true;
-      }
-    }
-    return thisEntry;
   }
 
   /*^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^*/
@@ -202,7 +239,7 @@ private:
 
   // Methods:
   void dsplyMorseLED(morseCharToken_t* pMorseCharToken);
-  
+
   inline void setLEDpixel(uint8_t row, uint8_t col, uint8_t value) {
     if ((row >= 8) || (col >= 12)) {
       return;
@@ -210,7 +247,6 @@ private:
       //frame[row][col] = value;
     }
   }
-
 };
 
 #endif /* KEYPRESS_H_ */
