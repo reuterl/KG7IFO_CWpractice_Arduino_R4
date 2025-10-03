@@ -377,7 +377,7 @@ bool keyPress::resolveElementType(keyElementToken_t *pElementToken) {
       break;
     case Kdown:
       //Serial.println("Kdown");
-      if (pElementToken->tDitUnits <= 2.0) {
+      if (pElementToken->tDitUnits <= 2.6) {
         pElementToken->morseElement = morseDit;
         //sprintf(sSprintf, "morseDit %4.2f\n", pElementToken->tDitUnits);
         //Serial.print(sSprintf);
@@ -484,10 +484,11 @@ bool keyPress::assignMorseElements(void) {
           if (pLastET) {
             //We got here with a kdown.  pLastET should point to it.
             pLastET->tDit = WPM2ms(runningWPM);
+            SPRINTF("Single Element, runningWPM = %d\n", runningWPM);
             //SPRINTF("pLastET->tDit = %d\n", pLastET->tDit);
             resolveElementType(pLastET);
             // Fill in Kidle fields.  Only morseElement matters.
-            pElementToken->tDit = 1;  // no divide by zero.
+            pElementToken->tDit = WPM2ms(runningWPM);
             resolveElementType(pElementToken);
           } else {
             Serial.println("pLastET is NULL, sorry.");
@@ -525,6 +526,8 @@ bool keyPress::assignMorseElements(void) {
           for (int jdx = 0; jdx < countRingBuffer; jdx++) {
             pElementTokenJ = peekRingBuffer(jdx);
             pElementTokenJ->tDit = smallestTdit;
+            // Logic to compare the two?
+            pElementTokenJ->tDit == WPM2ms(runningWPM);
             if (resolveElementType(pElementTokenJ) == true) {
               haveSpace = true;
             }
@@ -611,7 +614,7 @@ void keyPress::processKeyEntry(void) {
             morseCharToken.prosign = true;
             morseCharToken.morseChar = proIdx;
           } else {
-            C = '!';  // Spanish inverted question mark
+            C = '!';  // was Spanish inverted question mark (0xBF?)
             morseCharToken.valid = false;
             morseCharToken.prosign = false;
           }
@@ -630,7 +633,9 @@ void keyPress::processKeyEntry(void) {
         msg = RcvTxtChar->getMsg();
         SendCQmessage(Queues, msg);
         delete RcvTxtChar;
+#ifdef LED_MATRIX
         dsplyMorseLED(&morseCharToken);
+#endif
       }
       if (sendSpace) {
         //PRINTF("\r\n<SPACE>\r\n");
@@ -680,7 +685,7 @@ void keyPress::calcWPM(morseCharToken_t *pMorseCharToken) {
     runningWPM = std::min(runningWPM, maximumWPM);
   }
 }
-
+#ifdef LED_MATRIX
 void keyPress::dsplyMorseLED(morseCharToken_t *pMorseCharToken) {
   uint8_t elementIdx = 0;
   if (pMorseCharToken->valid == true) {
@@ -717,3 +722,4 @@ void keyPress::dsplyMorseLED(morseCharToken_t *pMorseCharToken) {
     dsplyLEDmatrix();
   }
 }
+#endif

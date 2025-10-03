@@ -24,7 +24,8 @@ class CmmdCode {
     cmmdReceiveTextChar = 0xF0,
     cmmdSendConfig = 0xA0,
     cmmdRespondCommand = 0xA1,
-    cmmdRestartAnnounced = 0xA2
+    cmmdRestartAnnounced = 0xA2,
+    cmmdPing = 0xAA
   } t_cmmdCodeEnum;
 
   typedef struct st_CmmdCodeElement {
@@ -33,7 +34,7 @@ class CmmdCode {
     string name;
   } t_cmmdCodeElement;
 
-  const t_cmmdCodeElement cmmdCodeTable[17] = {
+  const t_cmmdCodeElement cmmdCodeTable[18] = {
     { 0xB0, cmmdReqTableSize, "cmmdReqTableSize" },
     { 0xB1, cmmdReqHandle, "cmmdReqHandle" },
     { 0xB2, cmmdReturnTableSize, "cmmdReturnTableSize" },
@@ -54,7 +55,8 @@ class CmmdCode {
 
     { 0xA0, cmmdSendConfig, "cmmdSendConfig" },
     { 0xA1, cmmdRespondCommand, "cmmdRespondCommand" },
-    { 0xA2, cmmdRestartAnnounced, "cmmdRestartAnnounced"}
+    { 0xA2, cmmdRestartAnnounced, "cmmdRestartAnnounced"},
+    { 0xAA, cmmdPing, "cmmdPing"}
   };
 
   const uint8_t sizeCmmdCodeTable = (sizeof(cmmdCodeTable) / sizeof(t_cmmdCodeElement));

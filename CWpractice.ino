@@ -1,4 +1,5 @@
 
+#include "compileoptions.h"
 #include "AudioToneGen.h"
 #include "FspTimer.h"
 #include <SoftwareSerial.h>
@@ -7,6 +8,7 @@
 #include "SerialWaveType.h"
 #include "ProcessCommands.h"
 #include "Qcontainer.h"
+#include "CWcommUDP.h"
 
 #include "MorseChar.h"
 #include "keyPress.h"
@@ -24,6 +26,9 @@ AudioToneGen* ATGen;
 Qcontainer Queues;
 keyPress* keyPressHandler;
 MorseChar* morseChar;
+#if COMM_PATH_WIFI == 1
+CWcommUDP* commUDP;
+#endif
 
 uint8_t numTones = 8;  // Size of tone table
 
@@ -37,8 +42,8 @@ void NyquistCallback(timer_callback_args_t __attribute((unused)) * pArgs) {
 
   valueDAC = 0x00000FFF & ATGen->mixer();
   TgirlDAC.writeDAC(valueDAC);
-
-  if (pTimerHook != NULL){
+  // used by LED matrix
+  if (pTimerHook != NULL) {
     pTimerHook();
   }
 }
@@ -80,16 +85,36 @@ bool beginNyquistTime(float rate) {
 
 
 /*---------------------------------------------------------------------------*/
+
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(115200);  // Initialize serial communication at a baud rate of 115200
+
+#if COMM_PATH_SERIAL == 1
+  char commType[] = "Serial";
+#elif COMM_PATH_WIFI == 1
+  char commType[] = "WiFi";
+#else
+  char commType[] = "!INVALID!";
+#endif
+  Serial.print("KG7IFO CW Practice Trainer/Fist Analyzer.  Arduino Uno R3 WiFi version. UI Communications: ");
+  Serial.print(commType);
+  Serial.println(". Dim brightness, please.\n");
+
+#if COMM_PATH_SERIAL == 1
   SwSerial.begin(9600);
-  
-  Serial.println("KG7IFO CW Practice Trainer/Fist Analyzer.  Arduino Uno R3 WiFi version. Dim brightness, please.");
-  
-  TgirlDAC.setup_dac();
+#endif
 
   MDE = new machinedetat(&Queues);
+
+#if COMM_PATH_WIFI == 1
+  commUDP = new CWcommUDP(2390, MDE);
+  commUDP->setupUDP();
+#endif
+
+
+  TgirlDAC.setup_dac();
+
   ATGen = new AudioToneGen(numTones, nyquistFrequency);
 
   ATGen->setCommModeAmpl(0.1);  // reduce clipping on audio amp
@@ -111,7 +136,12 @@ void setup() {
   morseChar = new MorseChar(ATGen);
   keyPressHandler = new keyPress(ATGen, &Queues);
 
+#if COMM_PATH_SERIAL == 1
   InitProcessCQ(ATGen, morseChar, &Queues);
+#endif
+#if COMM_PATH_WIFI == 1
+  InitProcessCQ(ATGen, morseChar, &Queues, commUDP);
+#endif
 
   ProcessRestartAnnounce(numTones);
 }
@@ -120,12 +150,18 @@ void setup() {
 void loop() {
   uint8_t inputByte;
   // put your main code here, to run repeatedly:
+#if COMM_PATH_SERIAL == 1
   while (SwSerial.available()) {
     inputByte = SwSerial.read();
     MDE->msgParser(inputByte);
   }
-
-  ProcessReplayMessages();
+#endif
+#if COMM_PATH_WIFI == 1
+  commUDP->udpRcvStream();
+#endif
+#if COMM_PATH_SERIAL == 1
+  ProcessReplyMessages();
+#endif
 
   if (morseChar->soundMorseMsg() == false) {
   } else {

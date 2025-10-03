@@ -15,6 +15,10 @@
 #include "CmmdCode.h"
 #include "MorseSymbol.h"
 
+#define SPRINTF(FMT, args...) \
+  sprintf(sSprintf, FMT, args); \
+  Serial.print(sSprintf);
+
 class MsgUtil {
 protected:
   uint16_t CheckSum(uint8_t *Msg, uint8_t Length);
@@ -77,43 +81,43 @@ protected:
   }
 
 public:
-inline void dsplMsg(uint8_t * msg){
-  uint8_t i;
-  uint8_t lenMsg;
-  extern char sSprintf[];
-  Serial.print("[ ");
-  // C Q {Length}
-  lenMsg = msg[2];
-  for (i=0; i < 3; i++){
-    sprintf(sSprintf,"0x%02X ", msg[i]);
-    Serial.print(sSprintf);
-  }
-  Serial.print(" ");
-  // {Command Code}
-  sprintf(sSprintf,"0x%02X  <", msg[3]);
-  Serial.print(sSprintf);
-
-  // Message body
-  for(i=4; i < lenMsg-2; i++){
-    sprintf(sSprintf,"0x%02X ", msg[i]);
-    Serial.print(sSprintf);
-  }
-  Serial.print(">  ");
-  //Checksum
-  sprintf(sSprintf,"(0x%02X 0x%02X) ] {", msg[lenMsg-2], msg[lenMsg-1]);
-  Serial.print(sSprintf);
-
-  // Text view
-  for (i=0; i < lenMsg; i++){
-    char C = msg[i];
-    if (isascii(C) && isprint(C)){
-      Serial.print(C);
-    } else{
-      Serial.print(".");
+  inline void dsplMsg(uint8_t *msg) {
+    uint8_t i;
+    uint8_t lenMsg;
+    extern char sSprintf[];
+    Serial.print("[ ");
+    // C Q {Length}
+    lenMsg = msg[2];
+    for (i = 0; i < 3; i++) {
+      sprintf(sSprintf, "0x%02X ", msg[i]);
+      Serial.print(sSprintf);
     }
+    Serial.print(" ");
+    // {Command Code}
+    sprintf(sSprintf, "0x%02X  <", msg[3]);
+    Serial.print(sSprintf);
+
+    // Message body
+    for (i = 4; i < lenMsg - 2; i++) {
+      sprintf(sSprintf, "0x%02X ", msg[i]);
+      Serial.print(sSprintf);
+    }
+    Serial.print(">  ");
+    //Checksum
+    sprintf(sSprintf, "(0x%02X 0x%02X) ] {", msg[lenMsg - 2], msg[lenMsg - 1]);
+    Serial.print(sSprintf);
+
+    // Text view
+    for (i = 0; i < lenMsg; i++) {
+      char C = msg[i];
+      if (isascii(C) && isprint(C)) {
+        Serial.print(C);
+      } else {
+        Serial.print(".");
+      }
+    }
+    Serial.println("}");
   }
-  Serial.println("}");
-}
 };
 
 class enableTone : public MsgUtil, CmmdCode {
@@ -127,7 +131,7 @@ public:
 private:
   uint8_t Length;
   uint8_t Handle;
-  bool    All;
+  bool All;
   uint8_t MsgIdx;
   uint8_t msg[8];
 };
@@ -203,7 +207,7 @@ public:
   SendConfig(uint8_t *_Msg);
   virtual ~SendConfig();
 
-//  float getCommonModeAmplitude(uint8_t idx);
+  //  float getCommonModeAmplitude(uint8_t idx);
   uint8_t getHandle(uint8_t idx);
   float getAmplitude(uint8_t idx);
   float getFreq(uint8_t idx);
@@ -224,8 +228,8 @@ public:
   void setNsamples(uint16_t Nsamples);
   void setDefined(bool Defined);
   void setEnabled(bool Enabled);
-  uint8_t AddListEntry(uint8_t Idx, // index in SendConfig
-                       uint8_t ToneIndex, // index in toneTable
+  uint8_t AddListEntry(uint8_t Idx,        // index in SendConfig
+                       uint8_t ToneIndex,  // index in toneTable
                        uint8_t Handle,
                        SerialWaveType::t_codeEnum _Waveform,
                        float A,
@@ -275,13 +279,11 @@ class ReturnTableSize : public MsgUtil, CmmdCode, SerialWaveType {
   uint8_t MsgIdx;
   uint8_t msg[8];
 
-  public:
+public:
   ReturnTableSize(uint8_t size, bool status);
   ReturnTableSize(uint8_t *_Msg);
   //virtual ~ReturnTableSize();
-  uint8_t * getMsg(void);
-
-
+  uint8_t *getMsg(void);
 };
 
 class ReturnHandle : public MsgUtil, CmmdCode, SerialWaveType {
@@ -290,11 +292,11 @@ class ReturnHandle : public MsgUtil, CmmdCode, SerialWaveType {
   uint8_t MsgIdx;
   uint8_t msg[8];
 
-  public:
+public:
   ReturnHandle(uint8_t handle, bool status);
   ReturnHandle(uint8_t *_Msg);
   //virtual ~ReturnTableSize();
-  uint8_t * getMsg(void);
+  uint8_t *getMsg(void);
 };
 
 class RespondCommand : public MsgUtil, CmmdCode, SerialWaveType {
@@ -304,10 +306,10 @@ class RespondCommand : public MsgUtil, CmmdCode, SerialWaveType {
   uint8_t MsgIdx;
   uint8_t msg[8];
 
-  public:
+public:
   RespondCommand(uint8_t handle, uint8_t status);
   RespondCommand(uint8_t *_Msg);
-  uint8_t * getMsg(void);
+  uint8_t *getMsg(void);
 };
 
 class RestartAnnounced : public MsgUtil, CmmdCode, SerialWaveType {
@@ -316,10 +318,10 @@ class RestartAnnounced : public MsgUtil, CmmdCode, SerialWaveType {
   uint8_t MsgIdx;
   uint8_t msg[7];
 
-  public:
+public:
   RestartAnnounced(uint8_t numTones);
   RestartAnnounced(uint8_t *_Msg);
-  uint8_t * getMsg(void);
+  uint8_t *getMsg(void);
 };
 /*
 class msggenerator {
@@ -331,63 +333,75 @@ private:
 };
 */
 /* XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX */
-class SendMorseMsg: public MsgUtil, CmmdCode {
+class SendMorseMsg : public MsgUtil, CmmdCode {
 public:
-		SendMorseMsg(uint8_t * _Msg);
-		virtual ~SendMorseMsg();
-		uint8_t getTextLength(void);
-		char * getTextMsg(void);
+  SendMorseMsg(uint8_t *_Msg);
+  virtual ~SendMorseMsg();
+  uint8_t getTextLength(void);
+  char *getTextMsg(void);
 private:
-		uint8_t * msg;
-		uint8_t * textMsg;
-    	uint8_t Length;
-	    uint8_t textLength;
+  uint8_t *msg;
+  uint8_t *textMsg;
+  uint8_t Length;
+  uint8_t textLength;
 };
 
-class PlayMorseMsg: public MsgUtil, CmmdCode {
+class PlayMorseMsg : public MsgUtil, CmmdCode {
 public:
-	PlayMorseMsg(uint8_t * _Msg);
-	virtual ~PlayMorseMsg();
-	uint8_t getWPM(void);
+  PlayMorseMsg(uint8_t *_Msg);
+  virtual ~PlayMorseMsg();
+  uint8_t getWPM(void);
 private:
-uint8_t  msg[7];
-uint8_t Length;
-uint8_t WPM;
+  uint8_t msg[7];
+  uint8_t Length;
+  uint8_t WPM;
 };
 
-class SendSidetone: public MsgUtil, CmmdCode {
+class SendSidetone : public MsgUtil, CmmdCode {
 public:
-	SendSidetone(uint8_t * _Msg);
-	virtual ~SendSidetone();
-	float getSidetone(void);
+  SendSidetone(uint8_t *_Msg);
+  virtual ~SendSidetone();
+  float getSidetone(void);
 private:
-    uint8_t Length;
-	uint8_t msg[10];
-	float Sidetone;
+  uint8_t Length;
+  uint8_t msg[10];
+  float Sidetone;
 };
 
-class SendFarnsworth: public MsgUtil, CmmdCode {
+class SendFarnsworth : public MsgUtil, CmmdCode {
 public:
-	SendFarnsworth(uint8_t * _Msg);
-	virtual ~SendFarnsworth();
-	bool getFarnsworth(void);
+  SendFarnsworth(uint8_t *_Msg);
+  virtual ~SendFarnsworth();
+  bool getFarnsworth(void);
 private:
-	uint8_t msg[7];
-    uint8_t Length;
-    bool enableFarnsworth;
+  uint8_t msg[7];
+  uint8_t Length;
+  bool enableFarnsworth;
 };
 
-class ReceiveTextChar: public MsgUtil, CmmdCode, MorseSymbolDefn{
+class ReceiveTextChar : public MsgUtil, CmmdCode, MorseSymbolDefn {
 public:
-	ReceiveTextChar(morseCharToken_t * morseCharSeq);
-	virtual ~ReceiveTextChar();
-	uint8_t * getMsg(void);
+  ReceiveTextChar(morseCharToken_t *morseCharSeq);
+  virtual ~ReceiveTextChar();
+  uint8_t *getMsg(void);
 
 private:
-	uint8_t * msg;
-     uint8_t Length;
+  uint8_t *msg;
+  uint8_t Length;
 };
 
+class ping : public MsgUtil, CmmdCode, MorseSymbolDefn {
+public:
+  ping();
+  virtual ~ping();
+  void rcvPing(uint8_t *msg);
+  uint8_t * echoPing(void);
+  void newPing(uint16_t _payload);
 
+private:
+  uint8_t *msg;
+  uint8_t Length;
+  uint16_t payload;
+};
 
 #endif /* MSGGENERATOR_H_ */

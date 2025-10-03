@@ -14,82 +14,88 @@
 #include "AudioToneGen.h"
 #include "MorseSymbol.h"
 
+#define SPRINTF(FMT, args...) \
+	sprintf(sSprintf, FMT, args); \
+	Serial.print(sSprintf);
+extern char sSprintf[];
 
-class MorseChar:public MorseSymbolDefn {
+class MorseChar : public MorseSymbolDefn {
 public:
-	MorseChar(AudioToneGen * atGen);
+	MorseChar(AudioToneGen* atGen);
 	virtual ~MorseChar();
 
 
-	bool EncodeMorse(char C, RevMorseSeq_t * morseSeq);
-    char * DisplayMorse(RevMorseSeq_t Seq);
-    bool soundMorseChr(FwdMorseSeq_t * morseSeq, uint8_t WPM);
-    bool setMorseMsg(char * Msg);
-    bool soundMorseMsg(void);
+	bool EncodeMorse(char C, RevMorseSeq_t* morseSeq);
+	char* DisplayMorse(RevMorseSeq_t Seq);
+	bool soundMorseChr(FwdMorseSeq_t* morseSeq, uint8_t WPM);
+	bool setMorseMsg(char* Msg);
+	bool soundMorseMsg(void);
 
-    inline void setWPM(uint8_t wpm){
-    	WPM = wpm;
-    }
+	inline void setWPM(uint8_t wpm) {
+		WPM = wpm;
+	}
 
-     inline uint8_t getWPM(void){
-    	 return WPM;
-     }
+	inline uint8_t getWPM(void) {
+		return WPM;
+	}
 
-	inline void setSendMorse(void){
-        enableMorseMsg = true;
-    }
+	inline void setSendMorse(void) {
+		if (sizeMorseMsg != 0) {
+			enableMorseMsg = true;
+		}
+	}
 
-	inline void clrSendMorse(void){
-        enableMorseMsg = false;
-    }
+	inline void clrSendMorse(void) {
+		enableMorseMsg = false;
+	}
 
-    inline void stopPlayMorseMsg(void){
-    	abortPlayMorseMsg = true;
-    }
+	inline void stopPlayMorseMsg(void) {
+		abortPlayMorseMsg = true;
+	}
 
 private:
 
-    bool abortPlayMorseMsg;
-    uint8_t WPM;
+	bool abortPlayMorseMsg;
+	uint8_t WPM;
 
-    char morseMsg[256];
-    uint8_t sizeMorseMsg;
+	char morseMsg[256];
+	uint8_t sizeMorseMsg;
 
-    bool morseMsgValid;
-    bool enableMorseMsg;
+	bool morseMsgValid;
+	bool enableMorseMsg;
 
-    AudioToneGen * ATGen;
+	AudioToneGen* ATGen;
 
-    typedef enum {startChr_st,
-    	          start_elem_st,
-				  soundElem_st,
-				  soundWordSpc_st,
-				  setupIntra_st,
-				  soundIntra_st,
-				  nextElem_st,
-				  setupChrSpc_st,
-				  soundChrSpc_st,
-				  exitChr_st} soundChar_st;
+	typedef enum { startChr_st,
+		             start_elem_st,
+		             soundElem_st,
+		             soundWordSpc_st,
+		             setupIntra_st,
+		             soundIntra_st,
+		             nextElem_st,
+		             setupChrSpc_st,
+		             soundChrSpc_st,
+		             exitChr_st } soundChar_st;
 
 	soundChar_st soundChrState;
 
-	typedef enum {startMorseMsg_st,
-		          startSoundMorseMsg_st,
-				  soundMorseMsg_st,
-				  nextMorseMsgChr_st} soundMsg_e;
+	typedef enum { startMorseMsg_st,
+		             startSoundMorseMsg_st,
+		             soundMorseMsg_st,
+		             nextMorseMsgChr_st } soundMsg_e;
 
 	soundMsg_e soundMsgState;
 
 
-	void parseProsign (void);
+	void parseProsign(void);
 
 
-	inline bool validateMorseMsg(char * Msg){
-		for (uint16_t  K = 0; K < sizeof(morseMsg); K++){
-			if (Msg[K] == '\x00'){
+	inline bool validateMorseMsg(char* Msg) {
+		for (uint16_t K = 0; K < sizeof(morseMsg); K++) {
+			if (Msg[K] == '\x00') {
 				return true;
 			}
-			if (!isascii(Msg[K])){
+			if (!isascii(Msg[K])) {
 				return false;
 			}
 		}

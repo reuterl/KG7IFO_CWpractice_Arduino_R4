@@ -8,6 +8,7 @@
 #ifndef KEYPRESS_H_
 #define KEYPRESS_H_
 
+#include "compileoptions.h"
 #include <arduino.h>
 #include <stdint.h>
 #include "AudioToneGen.h"
@@ -20,7 +21,12 @@
   sprintf(sSprintf, FMT, args); \
   Serial.print(sSprintf);
 
+#ifdef LED_MATRIX
 class keyPress : public MorseSymbolDefn, LEDmatrix {
+#else
+class keyPress : public MorseSymbolDefn {
+#endif
+
 public:
   typedef enum keyState_e {
     keyStateIdle,
@@ -142,8 +148,7 @@ private:
     for (int idx = 0; idx < countRingBuffer; idx++) {
       pElementToken = peekRingBuffer(idx);
       if (pElementToken->processedElement == false) {
-          return true;
-        
+        return true;
       }
     }
     return false;
@@ -229,13 +234,6 @@ private:
   uint32_t getDuration(void);
   void setSideTone(void);
 
-  /*******  LED Matrix **********/
-  // Create an instance of the ArduinoLEDMatrix class
-  //ArduinoLEDMatrix  matrix;
-  // Define the frame array for the LED matrix
-  //uint8_t frame[8][12];
-
-  //LEDmatrix lsdmatrix;
 
   // Methods:
   void dsplyMorseLED(morseCharToken_t* pMorseCharToken);
