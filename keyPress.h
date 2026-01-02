@@ -70,6 +70,12 @@ public:
 
   /*-----------------------------------------------------------------*/
 private:
+
+// Timing thresholds in Tdit units. 
+  float thresholdTimeMark;  // mark or character space
+  float thresholdTimeWordSpace; // character space or word space
+  float thresholdTimeDit; // dit or a dah
+
   Qcontainer* Queues;
 
   uint32_t keyDiscretePin;
@@ -78,7 +84,7 @@ private:
   uint32_t stuckTimeout = 1000U;
   uint32_t idleTimeout = 2000U;
 
-  const uint32_t debounceInterval = 15U;
+  const uint32_t debounceInterval = 5U;
   uint16_t runningWPM;
   uint16_t maximumWPM;
   uint16_t WPM;
@@ -101,9 +107,13 @@ private:
   bool assignMorseElements(void);
   //void analyzeRingBuffer(void);
   bool fillRingBuffer(void);
-  bool resolveElementType(keyElementToken_t* pElementToken);
+  bool resolveElementType(keyElementToken_t* pElementToken, float tDit);
   //bool spaceDetect(void);
-
+  
+  inline uint8_t getAbsRingIdx(keyElementToken_t* thisEntry){
+  return thisEntry - ringBuffer; // Pointer math yields Number of keyElementToken_t
+  }
+  
   inline uint8_t incrRingBuffer(uint8_t idx) {
     idx++;
     if (idx >= sizeRingBuffer) {
@@ -197,6 +207,7 @@ private:
     headRingBuffer = tailRingBuffer = countRingBuffer = 0;
     isMTRingBuffer = true;
     isfullRingBuffer = false;
+    SPRINTF("Initialize Ring buffer. Size = %d\n", sizeRingBuffer);
   }
 
   /*^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^*/

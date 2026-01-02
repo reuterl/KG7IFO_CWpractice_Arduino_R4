@@ -105,12 +105,12 @@ void CWcommUDP::printWifiStatus() {
 }
 
 void CWcommUDP::writePacket(uint8_t * Msg, uint8_t Length){
-  //Serial.println("writePacket()");
+  Serial.println("writePacket()");
   
-  //Serial.print("Udp.remoteIP: ");
-  //Serial.println(Udp.remoteIP());
-  //Serial.print("Udp.remotePort: ");
-  //Serial.println(Udp.remotePort());
+  Serial.print("Udp.remoteIP: ");
+  Serial.println(Udp.remoteIP());
+  Serial.print("Udp.remotePort: ");
+  Serial.println(Udp.remotePort());
 
   Udp.beginPacket(Udp.remoteIP(), Udp.remotePort());
   Udp.write(Msg, Length);

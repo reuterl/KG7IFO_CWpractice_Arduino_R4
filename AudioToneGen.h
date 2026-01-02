@@ -11,11 +11,13 @@
 #include <stdint.h>
 #include <math.h>
 #include "SerialWaveType.h"
+#include "BuzzWave.h"
 
 
 class AudioToneGen : public SerialWaveType {
 private:
   uint8_t handle = 1;
+  bool sparkGap;
 public:
   AudioToneGen(uint8_t nTones, float nyquist);
   virtual ~AudioToneGen();
@@ -27,6 +29,13 @@ public:
 
 
   bool setTone(uint8_t idx, float A, float F, float Ph, SerialWaveType::t_codeEnum _Waveform);
+  bool setSound(uint8_t idx, const st_SoundWaveInfo * SoundWaveInfo);
+  
+  // Don't really belong here, but I didn't want them global.
+  // in common with processcommands and keyPress
+  bool getSparkGap(void);
+  void setSparkGap(bool enable);
+  //
   void clearTone(uint8_t idx);
   uint16_t mixer(void);
   float getNyquist(void);
@@ -85,7 +94,7 @@ public:
       bool enabled;
       bool synch;
       uint16_t *dacSample;
-      uint16_t nSamples;
+      uint32_t nSamples;
       uint16_t sampleIdx;
       uint8_t handle;
       uint8_t status;

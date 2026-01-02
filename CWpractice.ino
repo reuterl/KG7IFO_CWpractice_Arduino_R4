@@ -12,6 +12,11 @@
 
 #include "MorseChar.h"
 #include "keyPress.h"
+#include "BuzzWave.h"
+
+extern const uint16_t buzzWaveform[];
+//const uint16_t * pBuzz[] = buzzWaveform[0];
+extern uint32_t buzzSampleCount;
 
 timerHook pTimerHook = NULL;
 
@@ -34,7 +39,7 @@ uint8_t numTones = 8;  // Size of tone table
 
 FspTimer NyquistTimer;
 uint8_t gpioOut = 0;
-const float nyquistFrequency = 44000.0f;
+const float nyquistFrequency = 44100.0f;
 
 /*---------------------------------------------------------------------------*/
 void NyquistCallback(timer_callback_args_t __attribute((unused)) * pArgs) {
@@ -127,6 +132,10 @@ void setup() {
 
   ATGen->setTone(2, 1.0f, 700.0f, 0.0f, SerialWaveType::t_codeEnum::Sine);
   ATGen->setHandle(2, ATGen->generateHandle());
+
+  ATGen->setSound(3, &buzzWave);
+  ATGen->setHandle(3, ATGen->generateHandle());
+
   ATGen->Sync();
 
   if (beginNyquistTime(nyquistFrequency)) {

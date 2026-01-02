@@ -473,13 +473,18 @@ uint8_t PlayMorseMsg::getWPM(void) {
 
 /* ===========================================================================*/
 SendSidetone::SendSidetone(uint8_t *_Msg) {
-	Length = 10;
+	Length = 11;
 	memmove(msg, _Msg, Length);
-	Sidetone = Decode32Float(msg, 4);
+	sparkGap = msg[4];
+	Sidetone = Decode32Float(msg, 5);
 }
 
 SendSidetone::~SendSidetone() {
 	//PRINTF("~SendSidetone destructor.\r\n");
+}
+
+bool SendSidetone::getSparkGap(void) {
+	return sparkGap;
 }
 
 float SendSidetone::getSidetone(void) {

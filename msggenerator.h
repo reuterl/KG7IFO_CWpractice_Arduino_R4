@@ -362,9 +362,11 @@ public:
   SendSidetone(uint8_t *_Msg);
   virtual ~SendSidetone();
   float getSidetone(void);
+  bool  getSparkGap(void);
 private:
   uint8_t Length;
-  uint8_t msg[10];
+  uint8_t msg[11];
+  bool sparkGap;
   float Sidetone;
 };
 

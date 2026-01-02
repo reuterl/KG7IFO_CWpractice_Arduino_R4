@@ -90,7 +90,11 @@ bool MorseChar::soundMorseChr(FwdMorseSeq_t *morseSeq, uint8_t WPM) {
 				soundChrState = soundWordSpc_st;
 			} else {
 				elemTime = morseSeq->elements[ptr] ? (Tdit * 3) : (Tdit);
-				ATGen->setEnabled(2, true);
+				if (ATGen->getSparkGap()) {
+					ATGen->setEnabled(3, true);
+				} else {
+					ATGen->setEnabled(2, true);
+				}
 				startInterval(3);
 				soundChrState = soundElem_st;
 			}
@@ -110,7 +114,11 @@ bool MorseChar::soundMorseChr(FwdMorseSeq_t *morseSeq, uint8_t WPM) {
 			if (duration < elemTime) {
 				soundChrState = soundElem_st;
 			} else {
-				ATGen->setEnabled(2, false);
+				if (ATGen->getSparkGap()) {
+					ATGen->setEnabled(3, false);
+				} else {
+					ATGen->setEnabled(2, false);
+				}
 				soundChrState = setupIntra_st;
 			}
 			break;
@@ -173,7 +181,7 @@ bool MorseChar::soundMorseChr(FwdMorseSeq_t *morseSeq, uint8_t WPM) {
 bool MorseChar::setMorseMsg(char *Msg) {
 	morseMsgValid = false;
 	enableMorseMsg = false;
-  morseMsg[0] = '\0';  // init to  NULL string.
+	morseMsg[0] = '\0';  // init to  NULL string.
 
 	if (validateMorseMsg(Msg) == true) {
 		strcpy(morseMsg, Msg);

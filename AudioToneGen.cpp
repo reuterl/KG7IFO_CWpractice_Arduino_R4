@@ -9,6 +9,11 @@
 #include <math.h>
 #include <SoftwareSerial.h>
 
+extern char sSprintf[];
+#define SPRINTF(FMT, args...) \
+  sprintf(sSprintf, FMT, args); \
+  Serial.print(sSprintf);
+
 extern SoftwareSerial SwSerial;
 extern char sSprintf[];
 
@@ -20,7 +25,7 @@ AudioToneGen::AudioToneGen(uint8_t nTones, float nyquist) {
   // Initial common mode amplitude
   CommModeAmpl = 0.3f;
   CommModeAmpl = 1.0f;
-  
+
   toneList = new Tone_t[numTones];
 
   // Initialize all entries to undefined.
@@ -35,6 +40,7 @@ AudioToneGen::AudioToneGen(uint8_t nTones, float nyquist) {
     tone->freq = 0.0f;
     tone->phase = 0.0f;
   }
+  sparkGap = false;
 }
 
 AudioToneGen::~AudioToneGen() {
@@ -47,6 +53,14 @@ AudioToneGen::~AudioToneGen() {
 uint16_t AudioToneGen::getNsamples(uint8_t idx) {
   Tone_t *tone = &toneList[idx];
   return tone->nSamples;
+}
+
+void AudioToneGen::setSparkGap(bool enable){
+  sparkGap = enable;
+}
+
+bool AudioToneGen::getSparkGap(void){
+  return sparkGap;
 }
 
 void AudioToneGen::clearTone(uint8_t idx) {
@@ -184,7 +198,7 @@ bool AudioToneGen::generateWaveform(uint8_t idx) {
       tone->dacSample = new uint16_t[nSamples];
     }
   } else {
-    tone->dacSample = (uint16_t*) malloc(sizeof(uint16_t) * nSamples);
+    tone->dacSample = (uint16_t *)malloc(sizeof(uint16_t) * nSamples);
     if (tone->dacSample == NULL) {
       sprintf(sSprintf, "\n\n>>>>>>>>> [%d]tone->dacSample is NULL.  No more memory.\r\n", idx);
       Serial.print(sSprintf);
@@ -250,10 +264,19 @@ bool AudioToneGen::setTone(uint8_t idx, float A, float F, float Ph, SerialWaveTy
     //Serial.println(S);
   }
   */
- // Serial.println("\nDone");
+  // Serial.println("\nDone");
   return status;
 }
 
+bool AudioToneGen::setSound(uint8_t idx, const st_SoundWaveInfo * SoundWaveInfo){
+  Tone_t *tone = &toneList[idx];
+  tone->defined = true;
+  //tone->enabled = false; Don't change, if this is an update
+  tone->WaveformType =  SerialWaveType::t_codeEnum::Sound;
+  tone->dacSample = (uint16_t *)SoundWaveInfo->pSoundWave;
+  tone->nSamples = *SoundWaveInfo->length;
+  SPRINTF("Set Recorded Sound: Samples = %d, duration = %5.1f seconds\n", tone->nSamples, (float)tone->nSamples/Fnyquist );
+}
 
 bool AudioToneGen::setFreq(uint8_t idx, float freq) {
   Tone_t *tone = &toneList[idx];
@@ -389,8 +412,8 @@ uint16_t AudioToneGen::mixer(void) {
   uint16_t mixerProduct = 0;
   uint16_t mixCount = 0;
   uint16_t sample;
+  static uint16_t lastSample = 0;
 
-  
   for (int idx = 0; idx < numTones; idx++) {
     sample = getToneSample(idx);
     if (getEnabled(idx) == true) {
@@ -399,8 +422,9 @@ uint16_t AudioToneGen::mixer(void) {
     }
   }
   if (mixCount != 0) {
-    return mixerProduct / mixCount;
+    lastSample = mixerProduct / mixCount;
+    return lastSample;
   } else {
-    return 0;
+    return lastSample;
   }
 }

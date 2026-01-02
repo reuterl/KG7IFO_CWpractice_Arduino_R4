@@ -27,6 +27,12 @@ keyPress::keyPress(AudioToneGen *atgen, Qcontainer *_Queues) {
   runningWPM = 5;
   maximumWPM = 10;
   WPM = 5;
+
+  // Tdit units
+  thresholdTimeMark = 3.1;
+  thresholdTimeWordSpace = 7.0;
+  thresholdTimeDit = 2.6;
+
   timingMorseSpace = 3;
   timingMorseWordSpace = 5;
   Queues = _Queues;
@@ -125,7 +131,11 @@ void keyPress::setSideTone(void) {
     case elementStateDown:
       ATGen->setEnabled(0, false);
       ATGen->setEnabled(1, false);
-      ATGen->setEnabled(2, true);
+      if (ATGen->getSparkGap()) {
+        ATGen->setEnabled(3, true);
+      } else {
+        ATGen->setEnabled(2, true);
+      }
       break;
     case elementStateStuck:
       ATGen->setEnabled(2, false);
@@ -136,6 +146,7 @@ void keyPress::setSideTone(void) {
       ATGen->setEnabled(0, false);
       ATGen->setEnabled(1, false);
       ATGen->setEnabled(2, false);
+      ATGen->setEnabled(3, false);
       break;
   }
 }
@@ -340,23 +351,66 @@ bool keyPress::fillRingBuffer(void) {
   return pushElement;
 }
 
-bool keyPress::resolveElementType(keyElementToken_t *pElementToken) {
+void keyPress::dumpRingBuffer(void) {
+  keyElementToken_t *pElementToken;
+  char *CP;
+  Serial.println("Ring Buffer:");
+  if (isMTRingBuffer == true) {
+    Serial.println("MT\n");
+
+  } else {
+    countRingBuffer = getCountRingBuffer();
+    for (int idx = 0; idx < countRingBuffer; idx++) {
+      pElementToken = peekRingBuffer(idx);
+      SPRINTF("%02d *Event = ", getAbsRingIdx(pElementToken));
+      switch (pElementToken->Event) {
+        case Kup:
+          Serial.print("Kup");
+          break;
+        case Kdown:
+          Serial.print("Kdown");
+          break;
+        case Kstuck:
+          Serial.print("Kstuck");
+          break;
+        case Kidle:
+          Serial.print("Kidle");
+          break;
+        default:
+          Serial.print("default");
+          break;
+      }
+
+      SPRINTF("  morseElement = %s, ", printStrMorseElement(pElementToken->morseElement));
+      SPRINTF("  Duration = %d, ", pElementToken->Duration);
+      SPRINTF("  tDitUnits = %3.1f\n", pElementToken->tDitUnits);
+    }
+    Serial.println("");
+  }
+}
+
+bool keyPress::resolveElementType(keyElementToken_t *pElementToken, float tDit) {
   bool haveSpace = false;
 
   // Assign keydowns dit or dah status based on thresholds of dits near 1 and dahs near 3
   // Assign keyups mark, space or wordspace based on thresholds of mark near 1 space near three and wordspace over 5
   // keystuck and idle indicate end of sequence
 
+
   //sprintf(sSprintf,"Token event = %d\n"), pElementToken->Event;
   //Serial.print(sSprintf);
 
   pElementToken->tDitUnits = (float)pElementToken->Duration
-                             / (float)pElementToken->tDit;
+                             / tDit;
 
   switch (pElementToken->Event) {
     case Kup:
       //Serial.println("Kup");
-      if (pElementToken->tDitUnits < 4.0) {
+
+
+
+
+      if (pElementToken->tDitUnits < thresholdTimeMark) {
         pElementToken->morseElement = morseMark;
       } else if (getFarnsworthSpacing() == true) {
         if (pElementToken->Duration <= (WPM2ms(5) * 4)) {
@@ -365,7 +419,7 @@ bool keyPress::resolveElementType(keyElementToken_t *pElementToken) {
           pElementToken->morseElement = morseWordSpace;
         }
       } else {
-        if (pElementToken->tDitUnits < 7.0) {
+        if (pElementToken->tDitUnits < thresholdTimeWordSpace) {
           pElementToken->morseElement = morseSpace;
         } else {
           pElementToken->morseElement = morseWordSpace;
@@ -377,7 +431,7 @@ bool keyPress::resolveElementType(keyElementToken_t *pElementToken) {
       break;
     case Kdown:
       //Serial.println("Kdown");
-      if (pElementToken->tDitUnits <= 2.6) {
+      if (pElementToken->tDitUnits <= thresholdTimeDit) {
         pElementToken->morseElement = morseDit;
         //sprintf(sSprintf, "morseDit %4.2f\n", pElementToken->tDitUnits);
         //Serial.print(sSprintf);
@@ -400,43 +454,6 @@ bool keyPress::resolveElementType(keyElementToken_t *pElementToken) {
   return haveSpace;
 }
 
-void keyPress::dumpRingBuffer(void) {
-  keyElementToken_t *pElementToken;
-  char *CP;
-  Serial.println("Ring Buffer:");
-  if (isMTRingBuffer == true) {
-    Serial.println("MT\n");
-
-  } else {
-    countRingBuffer = getCountRingBuffer();
-    for (int idx = 0; idx < countRingBuffer; idx++) {
-      pElementToken = peekRingBuffer(idx);
-      Serial.print(" *Event = ");
-      switch (pElementToken->Event) {
-        case Kup:
-          Serial.println("Kup");
-          break;
-        case Kdown:
-          Serial.println("Kdown");
-          break;
-        case Kstuck:
-          Serial.println("Kstuck");
-          break;
-        case Kidle:
-          Serial.println("Kidle");
-          break;
-        default:
-          Serial.println("default");
-          break;
-      }
-      //SPRINTF("  morseElement = %s\n", printStrMorseElement(pElementToken->morseElement));
-      //SPRINTF("  Duration = %d\n", pElementToken->Duration);
-      //SPRINTF("  tDitUnits = %3.1f\n", pElementToken->tDitUnits);
-    }
-    Serial.println("");
-  }
-}
-
 bool keyPress::assignMorseElements(void) {
   typedef enum { st_idle,
                  st_dn,
@@ -449,6 +466,7 @@ bool keyPress::assignMorseElements(void) {
   uint8_t countRingBuffer;
   bool haveSpace = false;
   uint16_t smallestTdit = 0xFFFF;  // maxint
+  uint16_t smallestMark = 0xFFFF;  // maxint
 
   // Don't continuously re-evaluate
   if (unprocessedElementRingBuffer() == false) {
@@ -483,13 +501,16 @@ bool keyPress::assignMorseElements(void) {
           meState = st_idle;
           if (pLastET) {
             //We got here with a kdown.  pLastET should point to it.
-            pLastET->tDit = WPM2ms(runningWPM);
+            pLastET->tDit = smallestMark;
+            //pLastET->tDit = WPM2ms(runningWPM);
             SPRINTF("Single Element, runningWPM = %d\n", runningWPM);
             //SPRINTF("pLastET->tDit = %d\n", pLastET->tDit);
-            resolveElementType(pLastET);
+            resolveElementType(pLastET, smallestMark);
+            //resolveElementType(pLastET, WPM2ms(runningWPM));
+            pElementToken->tDit = smallestMark;
             // Fill in Kidle fields.  Only morseElement matters.
-            pElementToken->tDit = WPM2ms(runningWPM);
-            resolveElementType(pElementToken);
+            //pElementToken->tDit = WPM2ms(runningWPM);
+            resolveElementType(pElementToken, smallestMark);
           } else {
             Serial.println("pLastET is NULL, sorry.");
           }
@@ -514,26 +535,31 @@ bool keyPress::assignMorseElements(void) {
           keyElementToken_t *pElementTokenJ;
           for (int jdx = 0; jdx < countRingBuffer; jdx++) {
             pElementTokenJ = peekRingBuffer(jdx);
-            if ((pElementTokenJ->Event == Kdown) || (pElementTokenJ->Event == Kup)) {
-              if (pElementTokenJ->Event != Kidle) {
-                if (pElementTokenJ->Duration < smallestTdit) {
-                  smallestTdit = pElementTokenJ->Duration;
-                }
+            if (pElementTokenJ->Event == Kdown) {
+              if (pElementTokenJ->Duration < smallestTdit) {
+                smallestTdit = pElementTokenJ->Duration;
+              }
+            }
+            if (pElementTokenJ->Event == Kup) {
+              if (pElementTokenJ->Duration < smallestMark) {
+                smallestMark = pElementTokenJ->Duration;
               }
             }
           }
-          //SPRINTF("smallestTdit =  %d\n", smallestTdit);
+          SPRINTF("smallestTdit =  %d\n", smallestTdit);
+          SPRINTF("smallestMark =  %d\n", smallestMark);
           for (int jdx = 0; jdx < countRingBuffer; jdx++) {
             pElementTokenJ = peekRingBuffer(jdx);
-            pElementTokenJ->tDit = smallestTdit;
+            pElementTokenJ->tDit = smallestMark;
             // Logic to compare the two?
-            pElementTokenJ->tDit == WPM2ms(runningWPM);
-            if (resolveElementType(pElementTokenJ) == true) {
+            //pElementTokenJ->tDit = WPM2ms(runningWPM);
+            if (resolveElementType(pElementTokenJ, smallestMark) == true) {
               haveSpace = true;
             }
           }
           if (haveSpace == true) {
             meState = st_idle;
+            //Serial.print("return haveSpace\n");
             return true;
           }
         }

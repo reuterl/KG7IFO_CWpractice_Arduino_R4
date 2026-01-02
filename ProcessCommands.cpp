@@ -281,6 +281,7 @@ void ProcessStopMorseMsg(uint8_t *CmmdMsg) {
 void ProcessSendSidetone(uint8_t *CmmdMsg) {
   SendSidetone *SST = new SendSidetone(CmmdMsg);
   ATGen->setFreq(2, SST->getSidetone());
+  ATGen->setSparkGap(SST->getSparkGap());
   delete SST;
 }
 

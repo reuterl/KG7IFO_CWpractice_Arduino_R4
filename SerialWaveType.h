@@ -5,7 +5,7 @@ using namespace std;
 class SerialWaveType {
 
 public:
-typedef enum e_codeEnum {Sine=0xF0, Square=0xF1, Sawtooth=0xF2, Triangle=0xF3, Invalid=0xFF} t_codeEnum;
+typedef enum e_codeEnum {Sine=0xF0, Square=0xF1, Sawtooth=0xF2, Triangle=0xF3, Sound=0xF4, Invalid=0xFF} t_codeEnum;
 
 typedef struct st_typeCode {
   uint8_t code;
