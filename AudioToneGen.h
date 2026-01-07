@@ -12,7 +12,8 @@
 #include <math.h>
 #include "SerialWaveType.h"
 #include "BuzzWave.h"
-
+#include <memory>
+using namespace std;
 
 class AudioToneGen : public SerialWaveType {
 private:
@@ -108,7 +109,8 @@ public:
     void generateWaveformTriangle(Tone_t * tone);
 
 
-    Tone_t *toneList;
+    //Tone_t *toneList;
+    std::unique_ptr<Tone_t[]> toneList;
   };
 
 #endif /* AUDIOTONEGEN_H_ */

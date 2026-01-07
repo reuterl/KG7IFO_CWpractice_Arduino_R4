@@ -29,7 +29,7 @@ keyPress::keyPress(AudioToneGen *atgen, Qcontainer *_Queues) {
   WPM = 5;
 
   // Tdit units
-  thresholdTimeMark = 3.1;
+  thresholdTimeMark = 3.5;
   thresholdTimeWordSpace = 7.0;
   thresholdTimeDit = 2.6;
 
@@ -42,7 +42,9 @@ keyPress::keyPress(AudioToneGen *atgen, Qcontainer *_Queues) {
 keyPress::~keyPress() {
   // TODO Auto-generated destructor stub
   Serial.println("KeyPress: Destructor");
-}
+}/*
+ Low-level inteface to key GPIO.
+ */
 
 
 keyPress::keyPos_t keyPress::senseKeyPos(void) {
@@ -61,7 +63,16 @@ keyPress::keyPos_t keyPress::senseKeyPos(void) {
   lastKeyPos = currentKeyPos;
   return currentKeyPos;
 }
+/*
+  Debounce key strokes. procede from initial state, KBD_Debounce_Start,
+  to key up/down state (always down??). stay in debounce until succesive
+  iterations in same state reach debounceInterval. Then proceede to up/down
+  state and stay until key moves again.
 
+  set externally viewable keyState_st to up, down, TBD to indicate final
+  position of key.
+
+ */
 void keyPress::keyDebounce(void) {
   uint32_t Duration;
 
@@ -79,12 +90,13 @@ void keyPress::keyDebounce(void) {
       if (senseKeyPos() == keyDown) {
         if (getElapsed(2) < debounceInterval) {
           keyDebounce_st = KDB_Debounce_Dn;
+          keyState_st = keyStateTBD;
         } else {
           keyDebounce_st = KDB_Down;
           keyState_st = keyStateDown;
         }
       } else {
-        keyDebounce_st = KDB_Debounce_Start;
+        keyDebounce_st = KDB_Debounce_Dn; // stay in state throught debounceInterval
       }
       break;
 
@@ -92,12 +104,13 @@ void keyPress::keyDebounce(void) {
       if (senseKeyPos() == keyUp) {
         if (getElapsed(2) < debounceInterval) {
           keyDebounce_st = KDB_Debounce_Up;
+          keyState_st = keyStateTBD;
         } else {
           keyDebounce_st = KDB_Up;
           keyState_st = keyStateUp;
         }
       } else {
-        keyDebounce_st = KDB_Debounce_Start;
+        keyDebounce_st = KDB_Debounce_Up; // stay in state throught debounceInterval
       }
       break;
 
@@ -106,7 +119,9 @@ void keyPress::keyDebounce(void) {
       if (senseKeyPos() == keyDown) {
         keyDebounce_st = KDB_Down;
       } else {
-        keyDebounce_st = KDB_Debounce_Start;
+        startInterval(2);
+        keyDebounce_st = KDB_Debounce_Up;
+        keyState_st = keyStateTBD;
         lastDuration = Duration;
       }
       break;
@@ -116,7 +131,9 @@ void keyPress::keyDebounce(void) {
       if (senseKeyPos() == keyUp) {
         keyDebounce_st = KDB_Up;
       } else {
-        keyDebounce_st = KDB_Debounce_Start;
+        startInterval(2);
+        keyDebounce_st = KDB_Debounce_Dn;
+        keyState_st = keyStateTBD;
         lastDuration = Duration;
       }
       break;
@@ -125,7 +142,13 @@ void keyPress::keyDebounce(void) {
       break;
   }
 }
-
+/*
+  Sound off on key down.  Enable hard-coded tone #2 when key is being pressed.
+  Key logic determines when key has been hald down too long resulting in a stuck
+  key. Hard codeed tones 0 and 1, 350Hz and 440Hz, sound a dial tone.  When Spark gap
+  is .TRUE.  enable hard coded sound #3, whic is an electric buzz sound extracted
+  from a .WAV file.
+   */
 void keyPress::setSideTone(void) {
   switch (Element_st) {
     case elementStateDown:
@@ -150,6 +173,8 @@ void keyPress::setSideTone(void) {
       break;
   }
 }
+
+// Accesor for debounced keyState_st
 keyPress::keyState_t keyPress::getKeyState(void) {
   return keyState_st;
 }
@@ -157,6 +182,9 @@ keyPress::keyState_t keyPress::getKeyState(void) {
 uint32_t keyPress::getDuration(void) {
   return lastDuration;
 }
+/*
+ Wrapper for key element queue
+  */
 keyPress::keyElementToken_t *keyPress::getElementStream(void) {
   static keyElementToken_t KET;
   if (ElementStream.empty()) {
@@ -168,7 +196,18 @@ keyPress::keyElementToken_t *keyPress::getElementStream(void) {
   }
 }
 
-
+/*
+  Convert stream of keyState tokens (Up, Dn) to stream of timed elements.
+  Start interval timer(0) at each edge: idle-> down, down->up, up->down.
+  Up intervals become marks, which later will be interpreted as character
+  spaces, or word spaces.  Down intervals will become dits or dahs.  here,
+  we push them into the elemntStream queue, which will later be buffered
+  and parsed to determine word per minute speed and guess at the element
+  types: mark (element space), character space, or word space, and downs 
+  resolve to dits and dahs.  
+  Special casees are idle: no key activity for a while, and stuck key: 
+  holding key down for long interval.
+   */
 void keyPress::getElement(void) {
   keyState_t keyState;
   static keyElementToken_t KET;
@@ -264,7 +303,9 @@ void keyPress::getElement(void) {
 bool keyPress::getIsFullRingBuffer(void) {
   return isfullRingBuffer;
 }
-
+/*
+ debug/development print utility.
+ */
 void keyPress::printKeyElement(keyElementToken_t *KET) {
   char *newLine;
   char noExtra[] = "";
@@ -304,6 +345,9 @@ void keyPress::printKeyElement(keyElementToken_t *KET) {
   }
 }
 
+/*
+ debug/development print utility.
+ */
 char *keyPress::printStrMorseElement(morseElement_t E) {
   switch (E) {
     case morseDit:
@@ -330,6 +374,13 @@ char *keyPress::printStrMorseElement(morseElement_t E) {
   }
 }
 
+/*
+ Each iteration of main loop, pull stream of ups and downs from queue and
+ fill ring buffer.  Later in iteration, peek at the queue and guess at
+ element type (dit, dah, mark, space) by examining relative timing and trying
+ to determin words per minute, WPM, and assigning type by morse code rules:
+  dit, mark - 1 tdit.  dah, character space = 3 tdit, etc.
+  */
 bool keyPress::fillRingBuffer(void) {
   keyElementToken_t elementToken;
   bool pushElement = false;
@@ -350,6 +401,9 @@ bool keyPress::fillRingBuffer(void) {
   }
   return pushElement;
 }
+/*
+ debug/development print utility.
+ */
 
 void keyPress::dumpRingBuffer(void) {
   keyElementToken_t *pElementToken;
@@ -577,7 +631,12 @@ bool keyPress::assignMorseElements(void) {
 }
 
 // ////////////////////////////////////////////////////////////////////////////
-
+/*
+ Final step.  Each main iteration, peek into ring buffer.  Try to determing tdit
+ from elements at head of buffer.  if possible, assign dits and dahs according 
+ to tdit.  when a character or word space is recognized (or idle) look up dit/dah 
+ pattern in morse tree and transmit morse element message to user interface, along with timing.
+ */
 void keyPress::processKeyEntry(void) {
   static uint16_t WPM;
   bool charComplete = false;

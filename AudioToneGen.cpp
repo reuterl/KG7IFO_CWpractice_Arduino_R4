@@ -26,8 +26,8 @@ AudioToneGen::AudioToneGen(uint8_t nTones, float nyquist) {
   CommModeAmpl = 0.3f;
   CommModeAmpl = 1.0f;
 
-  toneList = new Tone_t[numTones];
-
+  //toneList = new Tone_t[numTones];
+  toneList = std::make_unique<Tone_t[]>(numTones);
   // Initialize all entries to undefined.
   for (int I = 0; I < numTones; I++) {
     Tone_t *tone = &toneList[I];
@@ -47,7 +47,7 @@ AudioToneGen::~AudioToneGen() {
   for (int idx = 0; idx < numTones; idx++) {
     clearTone(idx);
   }
-  delete toneList;
+  //delete toneList;
 }
 
 uint16_t AudioToneGen::getNsamples(uint8_t idx) {
