@@ -32,6 +32,7 @@ public:
     keyStateIdle,
     keyStateDown,
     keyStateUp,
+    keyStateTBD,
     keyStateStuck
   } keyState_t;
 
