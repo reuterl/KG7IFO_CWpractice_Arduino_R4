@@ -41,6 +41,7 @@ public:
 		                            morseSpace,
 		                            morseWordSpace,
 		                            morseIdle,
+																morseStuck,
 		                            morseUnknown } morseElement_t;
 
 

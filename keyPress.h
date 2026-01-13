@@ -67,15 +67,15 @@ public:
   void printKeyElement(keyElementToken_t* KET);
   char* printStrMorseElement(morseElement_t E);
   void calcWPM(morseCharToken_t* pMorseCharToken);
-
+  uint16_t guessTdit(void);
 
   /*-----------------------------------------------------------------*/
 private:
 
-// Timing thresholds in Tdit units. 
-  float thresholdTimeMark;  // mark or character space
-  float thresholdTimeWordSpace; // character space or word space
-  float thresholdTimeDit; // dit or a dah
+  // Timing thresholds in Tdit units.
+  float thresholdTimeMark;       // mark or character space
+  float thresholdTimeWordSpace;  // character space or word space
+  float thresholdTimeDit;        // dit or a dah
 
   Qcontainer* Queues;
 
@@ -108,13 +108,13 @@ private:
   bool assignMorseElements(void);
   //void analyzeRingBuffer(void);
   bool fillRingBuffer(void);
-  bool resolveElementType(keyElementToken_t* pElementToken, float tDit);
+  bool resolveElementType(keyElementToken_t* pElementToken, uint16_t tDit);
   //bool spaceDetect(void);
-  
-  inline uint8_t getAbsRingIdx(keyElementToken_t* thisEntry){
-  return thisEntry - ringBuffer; // Pointer math yields Number of keyElementToken_t
+
+  inline uint8_t getAbsRingIdx(keyElementToken_t* thisEntry) {
+    return thisEntry - ringBuffer;  // Pointer math yields Number of keyElementToken_t
   }
-  
+
   inline uint8_t incrRingBuffer(uint8_t idx) {
     idx++;
     if (idx >= sizeRingBuffer) {
@@ -188,12 +188,20 @@ private:
     }
     return thisEntry;
   }
+  /*
+   retreive indexed  entry in ring buffer, read-only.
+   if index is beyond last entry, return null
+   */
   inline keyElementToken_t* peekRingBuffer(uint8_t idx) {
-    uint8_t getIdx = headRingBuffer + idx;
-    if (getIdx >= sizeRingBuffer) {
-      getIdx = getIdx - sizeRingBuffer;
+    if (idx >= getCountRingBuffer()) {
+      return NULL;
+    } else {
+      uint8_t getIdx = headRingBuffer + idx;
+      if (getIdx >= sizeRingBuffer) {
+        getIdx = getIdx - sizeRingBuffer;
+      }
+      return &ringBuffer[getIdx];
     }
-    return &ringBuffer[getIdx];
   }
 
   inline uint8_t getSizeRingBuffer(void) {
