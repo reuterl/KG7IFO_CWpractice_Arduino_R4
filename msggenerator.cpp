@@ -389,11 +389,26 @@ RestartAnnounced::RestartAnnounced(uint8_t numTones) {
 	CheckSum(msg, Length);
 }
 
-RestartAnnounced::RestartAnnounced(uint8_t *_Msg) {
-}
 
 uint8_t *RestartAnnounced::getMsg(void) {
 	return msg;
+}
+/*###########################################################################*/
+uploadRunningWPM::uploadRunningWPM(uint8_t _runningWPM) {
+	Length = 7;
+	MsgIdx = initMsg(msg, Length, CmmdCode::t_cmmdCodeEnum::cmmdRunningWPM);
+  runningWPM = _runningWPM;
+	msg[MsgIdx++] = runningWPM;
+
+	CheckSum(msg, Length);
+}
+
+uint8_t *uploadRunningWPM::getMsg(void) {
+	return msg;
+}
+
+uploadRunningWPM::~uploadRunningWPM() {
+	Serial.print("~uploadRunningWPM destructor.\r\n");
 }
 /* XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX */
 ReceiveTextChar::ReceiveTextChar(morseCharToken_t *morseCharToken) {

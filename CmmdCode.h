@@ -22,6 +22,8 @@ class CmmdCode {
     cmmdSendFarnsworth = 0xD3,
     
     cmmdReceiveTextChar = 0xF0,
+    cmmdRunningWPM = 0xF1,
+
     cmmdSendConfig = 0xA0,
     cmmdRespondCommand = 0xA1,
     cmmdRestartAnnounced = 0xA2,
@@ -34,7 +36,7 @@ class CmmdCode {
     string name;
   } t_cmmdCodeElement;
 
-  const t_cmmdCodeElement cmmdCodeTable[18] = {
+  const t_cmmdCodeElement cmmdCodeTable[19] = {
     { 0xB0, cmmdReqTableSize, "cmmdReqTableSize" },
     { 0xB1, cmmdReqHandle, "cmmdReqHandle" },
     { 0xB2, cmmdReturnTableSize, "cmmdReturnTableSize" },
@@ -51,7 +53,8 @@ class CmmdCode {
     { 0xD2, cmmdSendSidetone, "cmmdSendSidetone" },
     { 0xD3, cmmdSendFarnsworth, "cmmdSendFarnsworth" },
 
-    { 0xE0, cmmdReceiveTextChar, "cmmdReceiveTextChar" },
+    { 0xF0, cmmdReceiveTextChar, "cmmdReceiveTextChar" },
+    { 0xF1, cmmdRunningWPM, "cmmdRunningWpm" },
 
     { 0xA0, cmmdSendConfig, "cmmdSendConfig" },
     { 0xA1, cmmdRespondCommand, "cmmdRespondCommand" },

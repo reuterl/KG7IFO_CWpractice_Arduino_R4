@@ -320,8 +320,20 @@ class RestartAnnounced : public MsgUtil, CmmdCode, SerialWaveType {
 
 public:
   RestartAnnounced(uint8_t numTones);
-  RestartAnnounced(uint8_t *_Msg);
   uint8_t *getMsg(void);
+};
+
+class uploadRunningWPM : public MsgUtil, CmmdCode, SerialWaveType {
+  uint8_t runningWPM;
+  uint8_t Length;
+  uint8_t MsgIdx;
+  uint8_t msg[7];
+
+public:
+  uploadRunningWPM(uint8_t runningWPM);
+  uint8_t *getMsg(void);
+    virtual ~uploadRunningWPM();
+
 };
 /*
 class msggenerator {

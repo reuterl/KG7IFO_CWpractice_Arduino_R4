@@ -85,6 +85,11 @@ private:
   uint32_t stuckTimeout = 1000U;
   uint32_t idleTimeout = 2000U;
 
+  //  use stuck key to generate command to reset runningWPM to default.
+  uint8_t countStuck;
+  bool stuckLatched;
+  bool stuckDetected;
+
   const uint32_t debounceInterval = 5U;
   uint16_t runningWPM;
   uint16_t maximumWPM;

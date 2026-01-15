@@ -24,6 +24,10 @@ keyPress::keyPress(AudioToneGen *atgen, Qcontainer *_Queues) {
   Element_st = elementStateStart;
   runningWPM = 5;
   maximumWPM = 10;
+  countStuck = 0;
+  stuckLatched = false;
+  stuckDetected = false;
+
   WPM = 5;
 
   // Tdit units
@@ -425,6 +429,7 @@ void keyPress::dumpRingBuffer(void) {
           break;
         case Kstuck:
           Serial.print("Kstuck");
+
           break;
         case Kidle:
           Serial.print("Kidle");
@@ -509,6 +514,8 @@ bool keyPress::resolveElementType(keyElementToken_t *pElementToken, uint16_t tDi
   switch (pElementToken->Event) {
     case Kup:
       //Serial.println("Kup");
+      stuckDetected = false;
+      countStuck = 0;  // needs two consectuive Kstuck. reset otherwise.
 
       if (pElementToken->tDitUnits < thresholdTimeMark) {
         pElementToken->morseElement = morseMark;
@@ -529,8 +536,11 @@ bool keyPress::resolveElementType(keyElementToken_t *pElementToken, uint16_t tDi
         haveSpace = true;
       }
       break;
+
     case Kdown:
       //Serial.println("Kdown");
+      stuckDetected = false;
+      countStuck = 0;  // needs two consectuive Kstuck. reset otherwise.
       if (pElementToken->tDitUnits <= thresholdTimeDit) {
         pElementToken->morseElement = morseDit;
         //sprintf(sSprintf, "morseDit %4.2f\n", pElementToken->tDitUnits);
@@ -541,12 +551,20 @@ bool keyPress::resolveElementType(keyElementToken_t *pElementToken, uint16_t tDi
       }
       break;
     case Kstuck:
-      Serial.println("Kstuck");
+      Serial.println("@Kstuck");
+      if (stuckDetected == false) {
+        SPRINTF("countStuck = %d\n", countStuck);
+        if (countStuck <= 1) {
+          if (countStuck++ == 1) {
+            stuckLatched = true;
+          }
+        }
+        stuckDetected = true;
+      }
       pElementToken->morseElement = morseStuck;
-      haveSpace = true;
       break;
     case Kidle:
-      Serial.println("Kidle");
+      Serial.println("@Kidle");
       pElementToken->morseElement = morseIdle;
       haveSpace = true;
       break;
@@ -642,7 +660,7 @@ bool keyPress::assignMorseElements(void) {
 // ////////////////////////////////////////////////////////////////
 // ////////////////////////////////////////////////////////////////////////////
 /*
- Final step.  Each main iteration, peek into ring buffer.  Try to determing tdit
+ Top of sequence parser.  Each main iteration, peek into ring buffer.  Try to determing tdit
  from elements at head of buffer.  if possible, assign dits and dahs according 
  to tdit.  when a character or word space is recognized (or idle) look up dit/dah 
  pattern in morse tree and transmit morse element message to user interface, along with timing.
@@ -700,6 +718,9 @@ void keyPress::processKeyEntry(void) {
             sendSpace = true;
           }
           break;
+        case morseStuck:
+          haveInput = false;
+          break;
         default:
           break;
       }
@@ -737,6 +758,18 @@ void keyPress::processKeyEntry(void) {
         dsplyMorseLED(&morseCharToken);
 #endif
       }
+      stuckDetected = false;
+      if (stuckLatched == true) {
+        Serial.println("<<STUCK detected.>>");
+        stuckLatched = false;
+        countStuck = 0;
+        //  Reset running WPM to default (5)
+        runningWPM = 5;
+        uploadRunningWPM *RWPM = new uploadRunningWPM(runningWPM);
+        SendCQmessage(Queues, RWPM->getMsg());
+        delete RWPM;
+      }
+
       if (sendSpace) {
         //PRINTF("\r\n<SPACE>\r\n");
       }
@@ -783,6 +816,9 @@ void keyPress::calcWPM(morseCharToken_t *pMorseCharToken) {
     runningWPM += WPM;
     runningWPM /= 2;
     runningWPM = std::min(runningWPM, maximumWPM);
+    uploadRunningWPM *RWPM = new uploadRunningWPM(runningWPM);
+    SendCQmessage(Queues, RWPM->getMsg());
+    delete RWPM;
   }
 }
 #ifdef LED_MATRIX

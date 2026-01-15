@@ -51,7 +51,7 @@ public:
 	typedef struct morseSeq_st {
 		uint8_t count;
 		bool isSpace;
-		uint8_t elements[9];
+		uint8_t elements[9]; // Longest sequence (9) is \SOS?? See marseCharToken_t
 	} morseSeq_t;
 
 	typedef morseSeq_t FwdMorseSeq_t;
