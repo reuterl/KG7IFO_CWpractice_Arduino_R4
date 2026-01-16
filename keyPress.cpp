@@ -294,6 +294,19 @@ void keyPress::getElement(void) {
     case elementStateStuck:
       if (keyState != keyStateDown) {
         Element_st = elementStateStart;
+        stuckDetected = false;  // clear edge detect on falling edge
+      } else {
+        // on stuck key rising edge, count occurance.
+        // on two occurances raise stuckDetect.
+        if (stuckDetected == false) {
+          SPRINTF("countStuck = %d\n", countStuck);
+          if (countStuck <= 1) {
+            if (countStuck++ == 1) {
+              stuckLatched = true;
+            }
+          }
+          stuckDetected = true;
+        }
       }
       break;
     default:
@@ -514,7 +527,6 @@ bool keyPress::resolveElementType(keyElementToken_t *pElementToken, uint16_t tDi
   switch (pElementToken->Event) {
     case Kup:
       //Serial.println("Kup");
-      stuckDetected = false;
       countStuck = 0;  // needs two consectuive Kstuck. reset otherwise.
 
       if (pElementToken->tDitUnits < thresholdTimeMark) {
@@ -539,7 +551,6 @@ bool keyPress::resolveElementType(keyElementToken_t *pElementToken, uint16_t tDi
 
     case Kdown:
       //Serial.println("Kdown");
-      stuckDetected = false;
       countStuck = 0;  // needs two consectuive Kstuck. reset otherwise.
       if (pElementToken->tDitUnits <= thresholdTimeDit) {
         pElementToken->morseElement = morseDit;
@@ -552,15 +563,6 @@ bool keyPress::resolveElementType(keyElementToken_t *pElementToken, uint16_t tDi
       break;
     case Kstuck:
       Serial.println("@Kstuck");
-      if (stuckDetected == false) {
-        SPRINTF("countStuck = %d\n", countStuck);
-        if (countStuck <= 1) {
-          if (countStuck++ == 1) {
-            stuckLatched = true;
-          }
-        }
-        stuckDetected = true;
-      }
       pElementToken->morseElement = morseStuck;
       break;
     case Kidle:
@@ -758,7 +760,6 @@ void keyPress::processKeyEntry(void) {
         dsplyMorseLED(&morseCharToken);
 #endif
       }
-      stuckDetected = false;
       if (stuckLatched == true) {
         Serial.println("<<STUCK detected.>>");
         stuckLatched = false;
@@ -815,7 +816,7 @@ void keyPress::calcWPM(morseCharToken_t *pMorseCharToken) {
     }
     runningWPM += WPM;
     runningWPM /= 2;
-    runningWPM = std::min(runningWPM, maximumWPM);
+    //runningWPM = std::min(runningWPM, maximumWPM);
     uploadRunningWPM *RWPM = new uploadRunningWPM(runningWPM);
     SendCQmessage(Queues, RWPM->getMsg());
     delete RWPM;
