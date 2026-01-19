@@ -155,7 +155,7 @@ void keyPress::keyDebounce(void) {
   Sound off on key down.  Enable hard-coded tone #2 when key is being pressed.
   Key logic determines when key has been hald down too long resulting in a stuck
   key. Hard codeed tones 0 and 1, 350Hz and 440Hz, sound a dial tone.  When Spark gap
-  is .TRUE.  enable hard coded sound #3, whic is an electric buzz sound extracted
+  is .TRUE.  enable hard coded sound #3, which is an electric buzz sound extracted
   from a .WAV file.
    */
 void keyPress::setSideTone(void) {
@@ -538,7 +538,6 @@ bool keyPress::resolveElementType(keyElementToken_t *pElementToken, uint16_t tDi
   switch (pElementToken->Event) {
     case Kup:
       //Serial.println("Kup");
-      countStuck = 0;  // needs two consectuive Kstuck. reset otherwise.
 
       if (pElementToken->tDitUnits < thresholdTimeMark) {
         pElementToken->morseElement = morseMark;
@@ -562,7 +561,6 @@ bool keyPress::resolveElementType(keyElementToken_t *pElementToken, uint16_t tDi
 
     case Kdown:
       //Serial.println("Kdown");
-      countStuck = 0;  // needs two consectuive Kstuck. reset otherwise.
       if (pElementToken->tDitUnits <= thresholdTimeDit) {
         pElementToken->morseElement = morseDit;
         //sprintf(sSprintf, "morseDit %4.2f\n", pElementToken->tDitUnits);
@@ -739,6 +737,7 @@ void keyPress::processKeyEntry(void) {
       }
 
       if (charComplete && haveInput) {
+        countStuck = 0; // reset any pending stuckLatched.  Only consecutive stuckKeys trigger,
         morseSeq.count = seqIdx;
         seqIdx = 0;
         if (!DecodeMorse(morseSeq, &C)) {
