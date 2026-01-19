@@ -30,14 +30,21 @@ keyPress::keyPress(AudioToneGen *atgen, Qcontainer *_Queues) {
 
   WPM = 5;
 
-  // Tdit units
-  thresholdTimeMark = 3.5;
-  thresholdTimeWordSpace = 7.0;
-  thresholdTimeDit = 2.6;
+  // Threshold limits for morse elements.
+  // Standard:
+  // dot (dit) = 1 timing unit (tDit)
+  // dash (dah) = 3 x dit
+  // mark, beteween dit and dah = 1 x dit
+  // space between characters = 3 x dit
+  // space between words = 7 x dit
+  // PARIS is usual example, and takes exactly 50 tDit units to send
+  // Tdit units, or fractions thereof:
+  thresholdTimeMark = 2.3; // mark or a char space?
+  thresholdTimeWordSpace = 7.0; // char space or word space?
+  thresholdTimeDit = 2.1; // dit or dah?
 
-  timingMorseSpace = 3;
-  timingMorseWordSpace = 5;
   Queues = _Queues;
+  // Set-up receiving buffer
   initialRingBuffer();
 }
 
@@ -492,9 +499,13 @@ uint16_t keyPress::guessTdit(void) {
   // first guess:
   if (smDn != 0) {
     firstTdit = smDn;
+    if (smMark != 0){
+      firstTdit = min(smDn, smMark);
+    }
   } else {
     firstTdit = smMark;
   }
+  
   //SPRINTF("firstTdit = %d\n", firstTdit);
   // If first try yeilds a dah that's much over 3 tdits,
   // scale tDit to longest dah/3

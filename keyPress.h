@@ -90,12 +90,10 @@ private:
   bool stuckLatched;
   bool stuckDetected;
 
-  const uint32_t debounceInterval = 5U;
+  const uint32_t debounceInterval = 5;
   uint16_t runningWPM;
   uint16_t maximumWPM;
   uint16_t WPM;
-  uint16_t timingMorseSpace;
-  uint16_t timingMorseWordSpace;
   bool haveMark;
 
   uint16_t TshortestMark, TshortestDahDit;
