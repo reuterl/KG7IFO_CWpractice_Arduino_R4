@@ -16,10 +16,8 @@
 #include "MorseSymbol.h"
 #include "Qcontainer.h"
 #include "LEDmatrix.h"
+#include "mySPRINTF.h"
 
-#define SPRINTF(FMT, args...) \
-  sprintf(sSprintf, FMT, args); \
-  Serial.print(sSprintf);
 
 #ifdef LED_MATRIX
 class keyPress : public MorseSymbolDefn, LEDmatrix {
@@ -54,10 +52,10 @@ public:
   } keyElementToken_t;
 
 
+
   keyPress(AudioToneGen* atgen, Qcontainer* _Queues);
   virtual ~keyPress();
 
-  void keyDebounce(void);
   keyState_t getKeyState(void);
 
   void getElement(void);
@@ -79,18 +77,18 @@ private:
 
   Qcontainer* Queues;
 
-  uint32_t keyDiscretePin;
+  //uint32_t keyDiscretePin; todo:
   uint32_t ledDiscretePin = 13;  // Built-in LED on  Arduino boards
 
   uint32_t stuckTimeout = 1000U;
-  uint32_t idleTimeout = 2000U;
+  uint32_t idleTimeout  = 1000U;
 
   //  use stuck key to generate command to reset runningWPM to default.
   uint8_t countStuck;
   bool stuckLatched;
   bool stuckDetected;
 
-  const uint32_t debounceInterval = 5;
+  //const uint32_t debounceInterval = 5; todo:
   uint16_t runningWPM;
   uint16_t maximumWPM;
   uint16_t WPM;
@@ -222,6 +220,15 @@ private:
     SPRINTF("Initialize Ring buffer. Size = %d\n", sizeRingBuffer);
   }
 
+  /*^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^*/
+  //Key Stream, Edge detect state machine from ISR
+  typedef enum KeyStreamState_e {
+    kss_idle = 0xE0,
+    kss_dn,
+    kss_up,
+    kss_stuck
+  } KeyStreamState_e;
+  KeyStreamState_e KeyStreamState_st;
   /*^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^*/
   typedef enum elementState_e {
     elementStateStart,

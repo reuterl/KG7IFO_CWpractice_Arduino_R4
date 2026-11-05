@@ -6,7 +6,7 @@
 
 extern char sSprintf[];
 
-// Timer hoo called from NyquistTimer
+// Timer hook called from NyquistTimer
 typedef void (*timerHook)(void);
 extern timerHook pTimerHook;
 

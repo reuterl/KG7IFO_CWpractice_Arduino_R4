@@ -16,10 +16,7 @@
 #include "MorseChar.h"
 #include "keyPress.h"
 #include "CWcommUDP.h"
-
-#define SPRINTF(FMT, args...) \
-  sprintf(sSprintf, FMT, args); \
-  Serial.print(sSprintf);
+#include "mySPRINTF.h"
 
 /*---------------------------------------------------------------------------*/
 uint8_t SendCQmessage(Qcontainer *Queues, uint8_t *Msg);

@@ -13,7 +13,7 @@
     but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU General Public License for more details.
-*/
+* /
 
 // RA4M1 User’s Manual: Hardware
 // This doc has all the register discriptions I use:
@@ -71,7 +71,7 @@
 
 // =========== Ports ============
 // 19.2.5 Port mn Pin Function Select Register (PmnPFS/PmnPFS_HA/PmnPFS_BY) (m = 0 to 9; n = 00 to 15)
-#define PORTBASE 0x40040000 /* Port Base */
+#define PORTBASE 0x40040000 /* Port Base * /
 
 #define P000PFS 0x0800                                                         // Port 0 Pin Function Select Register
 #define PFS_P000PFS ((volatile unsigned int *)(PORTBASE + P000PFS))            //
@@ -109,9 +109,9 @@
 #define PFS_P302PFS_BY ((volatile unsigned char *)(PORTBASE + 0x08C3 + (02 * 4)))  // D1 / TxD (P302)
 #define PFS_P303PFS_BY ((volatile unsigned char *)(PORTBASE + 0x08C3 + (03 * 4)))  // D9
 #define PFS_P304PFS_BY ((volatile unsigned char *)(PORTBASE + 0x08C3 + (04 * 4)))  // D8
-
+/**/
 #include "TriodeGirlDAC.h"
-//#include "Arduino.h"
+#include "susan_ra4m1_minima_register_defines.h"
 
 void TriodeGirlDAC::writeDAC(uint16_t value) {
   *DAC12_DADR0 = value;

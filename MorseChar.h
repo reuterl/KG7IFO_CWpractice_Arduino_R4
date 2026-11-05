@@ -13,11 +13,7 @@
 #include <math.h>
 #include "AudioToneGen.h"
 #include "MorseSymbol.h"
-
-#define SPRINTF(FMT, args...) \
-	sprintf(sSprintf, FMT, args); \
-	Serial.print(sSprintf);
-extern char sSprintf[];
+#include "mySPRINTF.h"
 
 class MorseChar : public MorseSymbolDefn {
 public:

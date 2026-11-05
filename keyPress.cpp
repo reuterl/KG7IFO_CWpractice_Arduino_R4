@@ -1,3 +1,4 @@
+#include "Arduino.h"
 /*
  * keyPress.cpp
  *
@@ -7,15 +8,12 @@
 #include "keyPress.h"
 #include "msggenerator.h"
 #include "ProcessCommands.h"
-
+// +++++++++++++++++++++++ Constructor ++++++++++++++++++++++++++++++++++++++++
 keyPress::keyPress(AudioToneGen *atgen, Qcontainer *_Queues) {
   Serial.println("KeyPress: Constructor");
   ATGen = atgen;
 
-  keyDiscretePin = 7;
   ledDiscretePin = LED_BUILTIN;  // Built-in LED on  Arduino boards
-  pinMode(keyDiscretePin, INPUT);
-  pinMode(keyDiscretePin, INPUT_PULLUP);
   pinMode(ledDiscretePin, OUTPUT);
   digitalWrite(ledDiscretePin, LOW);  // HIGH == LED on
 
@@ -39,151 +37,23 @@ keyPress::keyPress(AudioToneGen *atgen, Qcontainer *_Queues) {
   // space between words = 7 x dit
   // PARIS is usual example, and takes exactly 50 tDit units to send
   // Tdit units, or fractions thereof:
-  thresholdTimeMark = 2.3; // mark or a char space?
-  thresholdTimeWordSpace = 7.0; // char space or word space?
-  thresholdTimeDit = 2.1; // dit or dah?
+  thresholdTimeMark = 2.3;       // mark or a char space?
+  thresholdTimeWordSpace = 7.0;  // char space or word space?
+  thresholdTimeDit = 2.1;        // dit or dah?
 
   Queues = _Queues;
   // Set-up receiving buffer
   initialRingBuffer();
+  // Init keyStreamState (edge detect)
+  KeyStreamState_st = kss_idle;
 }
-
+// ------------------------------------- Destructor ---------------------------
 keyPress::~keyPress() {
   // TODO Auto-generated destructor stub
   Serial.println("KeyPress: Destructor");
-} /*
- Low-level inteface to key GPIO.
- */
-
-
-keyPress::keyPos_t keyPress::senseKeyPos(void) {
-  static keyPos_t lastKeyPos = keyUp;
-  keyPos_t currentKeyPos;
-
-  uint32_t thisKeyPos = digitalRead(keyDiscretePin);
-
-  if (thisKeyPos == HIGH) {
-    digitalWrite(ledDiscretePin, HIGH);
-    currentKeyPos = keyUp;
-  } else {
-    digitalWrite(ledDiscretePin, LOW);
-    currentKeyPos = keyDown;
-  }
-  lastKeyPos = currentKeyPos;
-  return currentKeyPos;
 }
-/*
-  Debounce key strokes. procede from initial state, KBD_Debounce_Start,
-  to key up/down state (always down??). stay in debounce until succesive
-  iterations in same state reach debounceInterval. Then proceede to up/down
-  state and stay until key moves again.
-
-  set externally viewable keyState_st to up, down, TBD to indicate final
-  position of key.
-
- */
-void keyPress::keyDebounce(void) {
-  uint32_t Duration;
-
-  switch (keyDebounce_st) {
-    case KDB_Debounce_Start:
-      if (senseKeyPos() == keyDown) {
-        keyDebounce_st = KDB_Debounce_Dn;
-      } else {
-        keyDebounce_st = KDB_Debounce_Up;
-      }
-      startInterval(2);
-      break;
-
-    case KDB_Debounce_Dn:
-      if (senseKeyPos() == keyDown) {
-        if (getElapsed(2) < debounceInterval) {
-          keyDebounce_st = KDB_Debounce_Dn;
-          keyState_st = keyStateTBD;
-        } else {
-          keyDebounce_st = KDB_Down;
-          keyState_st = keyStateDown;
-        }
-      } else {
-        keyDebounce_st = KDB_Debounce_Dn;  // stay in state throught debounceInterval
-      }
-      break;
-
-    case KDB_Debounce_Up:
-      if (senseKeyPos() == keyUp) {
-        if (getElapsed(2) < debounceInterval) {
-          keyDebounce_st = KDB_Debounce_Up;
-          keyState_st = keyStateTBD;
-        } else {
-          keyDebounce_st = KDB_Up;
-          keyState_st = keyStateUp;
-        }
-      } else {
-        keyDebounce_st = KDB_Debounce_Up;  // stay in state throught debounceInterval
-      }
-      break;
-
-    case KDB_Down:
-      Duration = getElapsed(2);
-      if (senseKeyPos() == keyDown) {
-        keyDebounce_st = KDB_Down;
-      } else {
-        startInterval(2);
-        keyDebounce_st = KDB_Debounce_Up;
-        keyState_st = keyStateTBD;
-        lastDuration = Duration;
-      }
-      break;
-
-    case KDB_Up:
-      Duration = getElapsed(2);
-      if (senseKeyPos() == keyUp) {
-        keyDebounce_st = KDB_Up;
-      } else {
-        startInterval(2);
-        keyDebounce_st = KDB_Debounce_Dn;
-        keyState_st = keyStateTBD;
-        lastDuration = Duration;
-      }
-      break;
-
-    default:
-      break;
-  }
-}
-/*
-  Sound off on key down.  Enable hard-coded tone #2 when key is being pressed.
-  Key logic determines when key has been hald down too long resulting in a stuck
-  key. Hard codeed tones 0 and 1, 350Hz and 440Hz, sound a dial tone.  When Spark gap
-  is .TRUE.  enable hard coded sound #3, which is an electric buzz sound extracted
-  from a .WAV file.
-   */
-void keyPress::setSideTone(void) {
-  switch (Element_st) {
-    case elementStateDown:
-      ATGen->setEnabled(0, false);
-      ATGen->setEnabled(1, false);
-      if (ATGen->getSparkGap()) {
-        ATGen->setEnabled(3, true);
-      } else {
-        ATGen->setEnabled(2, true);
-      }
-      break;
-    case elementStateStuck:
-      ATGen->setEnabled(2, false);
-      ATGen->setEnabled(0, true);
-      ATGen->setEnabled(1, true);
-      break;
-    default:
-      ATGen->setEnabled(0, false);
-      ATGen->setEnabled(1, false);
-      ATGen->setEnabled(2, false);
-      ATGen->setEnabled(3, false);
-      break;
-  }
-}
-
-// Accesor for debounced keyState_st
+// ------------------------------------- Destructor ---------------------------
+// Accesor for debounced keyState_st todo: needed?
 keyPress::keyState_t keyPress::getKeyState(void) {
   return keyState_st;
 }
@@ -214,109 +84,131 @@ keyPress::keyElementToken_t *keyPress::getElementStream(void) {
   and parsed to determine word per minute speed and guess at the element
   types: mark (element space), character space, or word space, and downs 
   resolve to dits and dahs.  
-  Special casees are idle: no key activity for a wile, and stuck key: 
+  Special casees are idle: no key activity for a while, and stuck key: 
   holding key down for long interval (stuckTimeout).
+  
+  Note: two stucks in a row will reset the running WPM.
+
    */
 void keyPress::getElement(void) {
-  keyState_t keyState;
   static keyElementToken_t KET;
-  uint32_t Duration;
+  uint32_t now;
+  //==========================================================
+  //==========================================================
+  st_keyEvt keyEvt;
+  static uint32_t tStartDn, tStartUp;
+  static st_keyEvt lastKeyEvt = { EdgeUp, 0 };
+  bool xyzzy = false;
+  static bool stuck = false, idle = false;
 
-  keyDebounce();
-  keyState = getKeyState();
+  char dup[16] = "";
+  char memDup[2] = "";
 
-  switch (Element_st) {
-    case elementStateStart:
-      switch (keyState) {
-        case keyStateDown:
-          Element_st = elementStateDown;
-          startInterval(0);
-          break;
-        case keyStateUp:
-          Element_st = elementStateUp;
-          startInterval(0);
-          break;
-        default:
-          break;
+  now = millis();  // capture current time.
+
+  noInterrupts();
+  if (Queues->EdgeDetectStream.empty()) {
+    keyEvt.evt = EdgeNull;
+  } else {
+    keyEvt = Queues->EdgeDetectStream.front();
+    Queues->EdgeDetectStream.pop();
+    xyzzy = true;
+  }
+
+  interrupts();
+  if (xyzzy) {
+    if (keyEvt.evt == lastKeyEvt.evt) {
+      strcpy(dup, "++Duplicate++");
+      strcpy(memDup, "!");
+    } else {
+      strcpy(dup, "");
+    }
+    lastKeyEvt = keyEvt;
+
+    SPRINTF("==%sEdge Event = %02X: ", memDup, keyEvt.evt);
+    if (keyEvt.evt == EdgeDn) {
+      SPRINTF("Edge Dn");
+    } else if (keyEvt.evt == EdgeUp) {
+      SPRINTF("Edge Up");
+    } else {
+      SPRINTF(" ??");
+    }
+    //SPRINTF(", T = %d now = %d", keyEvt.evtTime, now);
+    SPRINTF("         %s ", dup);
+    SPRINTF("\n");
+  }
+
+  switch (KeyStreamState_st) {
+    case kss_idle:
+      if (!idle) {
+        SPRINTF("kss_idle\n");
+        idle = true;
+      }
+      Element_st = elementStateIdle;
+      if (keyEvt.evt == EdgeDn) {
+        tStartDn = keyEvt.evtTime;
+        KeyStreamState_st = kss_dn;
       }
       break;
-
-    case elementStateDown:
-      Duration = getElapsed(0);
-      switch (keyState) {
-        case keyStateDown:
-          if (Duration < stuckTimeout) {
-            Element_st = elementStateDown;
-          } else {
-            Element_st = elementStateStuck;
-            KET.Duration = Duration;
-            KET.Event = Kstuck;
-            ElementStream.push(KET);
-          }
-          break;
-
-        case keyStateUp:
-          Element_st = elementStateStart;
-          KET.Duration = Duration;
+    case kss_dn:
+      //SPRINTF("kss_dn\n");
+      idle = false;
+      stuck = false;
+      Element_st = elementStateDown;
+      if ((now - tStartDn) < stuckTimeout) {
+        if (keyEvt.evt == EdgeUp) {
+          SPRINTF("Down\n");
+          tStartUp = keyEvt.evtTime;
           KET.Event = Kdown;
+          KET.Duration = keyEvt.evtTime - tStartDn;
           ElementStream.push(KET);
-          break;
-        default:
-          break;
-      }
-      break;
-
-    case elementStateUp:
-      Duration = getElapsed(0);
-      switch (keyState) {
-        case keyStateUp:
-          if (Duration < idleTimeout) {
-            Element_st = elementStateUp;
-          } else {
-            Element_st = elementStateIdle;
-            KET.Duration = Duration;
-            KET.Event = Kidle;
-            ElementStream.push(KET);
-            //Serial.println("[[Kidle]]");
-          }
-          break;
-
-        case keyStateDown:
-          Element_st = elementStateStart;
-          KET.Duration = Duration;
-          KET.Event = Kup;
-          ElementStream.push(KET);
-          break;
-        default:
-          break;
-      }
-      break;
-
-    case elementStateIdle:
-      if (keyState != keyStateUp) {
-        Element_st = elementStateStart;
-      }
-      break;
-
-    case elementStateStuck:
-      if (keyState != keyStateDown) {
-        Element_st = elementStateStart;
-        stuckDetected = false;  // clear edge detect on falling edge
-      } else {
-        // on stuck key rising edge, count occurance.
-        // on two occurances raise stuckDetect.
-        if (stuckDetected == false) {
-          SPRINTF("countStuck = %d\n", countStuck);
-          if (countStuck <= 1) {
-            if (countStuck++ == 1) {
-              stuckLatched = true;
-            }
-          }
-          stuckDetected = true;
+          KeyStreamState_st = kss_up;
         }
+      } else {
+        SPRINTF("Stuck\n");
+        KET.Event = Kstuck;
+        KET.Duration = 0;
+        ElementStream.push(KET);
+        KeyStreamState_st = kss_stuck;
+      }
+      break;
+    case kss_up:
+      //SPRINTF("kss_up\n");
+      idle = false;
+      stuck = false;
+      Element_st = elementStateUp;
+      if ((now - tStartUp) < idleTimeout) {
+        if (keyEvt.evt == EdgeDn) {
+          SPRINTF("Up\n");
+          tStartDn = keyEvt.evtTime;
+          KET.Event = Kup;
+          KET.Duration = keyEvt.evtTime - tStartUp;
+          ElementStream.push(KET);
+          KeyStreamState_st = kss_dn;
+        }
+      } else {
+        SPRINTF("Idle\n");
+        KET.Event = Kidle;
+        KET.Duration = 0;
+        ElementStream.push(KET);
+        KeyStreamState_st = kss_idle;
+      }
+      break;
+    case kss_stuck:
+      if (!stuck) {
+        SPRINTF("kss_stuck\n");
+        stuck = true;
+      }
+      Element_st = elementStateStuck;
+      if (keyEvt.evt == EdgeUp) {
+        KET.Duration = 0;
+        KET.Event = Kstuck;
+        ElementStream.push(KET);
+        KeyStreamState_st = kss_idle;
       }
       break;
     default:
+      SPRINTF("Invalid Stream State = %02X\n", (uint8_t)KeyStreamState_st);
       break;
   }
   setSideTone();
@@ -401,8 +293,8 @@ char *keyPress::printStrMorseElement(morseElement_t E) {
  Each iteration of main loop, pull stream of ups and downs from queue and
  fill ring buffer.  Later in iteration, peek at the queue and guess at
  element type (dit, dah, mark, space) by examining relative timing and trying
- to determin words per minute, WPM, and assigning type by morse code rules:
-  dit, mark - 1 tdit.  dah, character space = 3 tdit, etc.
+ to determine words per minute, WPM, and assigning type by morse code rules:
+  dit, mark = 1 tdit.  dah, character space = 3 tdit, etc.
   */
 bool keyPress::fillRingBuffer(void) {
   keyElementToken_t elementToken;
@@ -499,13 +391,13 @@ uint16_t keyPress::guessTdit(void) {
   // first guess:
   if (smDn != 0) {
     firstTdit = smDn;
-    if (smMark != 0){
+    if (smMark != 0) {
       firstTdit = min(smDn, smMark);
     }
   } else {
     firstTdit = smMark;
   }
-  
+
   //SPRINTF("firstTdit = %d\n", firstTdit);
   // If first try yeilds a dah that's much over 3 tdits,
   // scale tDit to longest dah/3
@@ -737,7 +629,7 @@ void keyPress::processKeyEntry(void) {
       }
 
       if (charComplete && haveInput) {
-        countStuck = 0; // reset any pending stuckLatched.  Only consecutive stuckKeys trigger,
+        countStuck = 0;  // reset any pending stuckLatched.  Only consecutive stuckKeys trigger,
         morseSeq.count = seqIdx;
         seqIdx = 0;
         if (!DecodeMorse(morseSeq, &C)) {
@@ -869,4 +761,41 @@ void keyPress::dsplyMorseLED(morseCharToken_t *pMorseCharToken) {
     dsplyLEDmatrix();
   }
 }
+
+/*
+  Sound off on key down.  Enable hard-coded tone #2 when key is being pressed.
+  Key logic determines when key has been hald down too long resulting in a stuck
+  key. Hard codeed tones 0 and 1, 350Hz and 440Hz, sound a dial tone.  When Spark gap
+  is .TRUE.  enable hard coded sound #3, which is an electric buzz sound extracted
+  from a .WAV file.
+   */
+void keyPress::setSideTone(void) {
+  switch (Element_st) {
+    case elementStateDown:
+      ATGen->setEnabled(0, false);
+      ATGen->setEnabled(1, false);
+      if (ATGen->getSparkGap()) {
+        ATGen->setEnabled(3, true);
+      } else {
+        ATGen->setEnabled(2, true);
+      }
+      digitalWrite(ledDiscretePin, LOW);  // HIGH == LED on
+      break;
+    case elementStateStuck:
+      ATGen->setEnabled(2, false);
+      ATGen->setEnabled(0, true);
+      ATGen->setEnabled(1, true);
+      digitalWrite(ledDiscretePin, HIGH);  // HIGH == LED on
+      break;
+    default:
+      ATGen->setEnabled(0, false);
+      ATGen->setEnabled(1, false);
+      ATGen->setEnabled(2, false);
+      ATGen->setEnabled(3, false);
+      digitalWrite(ledDiscretePin, HIGH);  // HIGH == LED on
+      break;
+  }
+}
+
+
 #endif

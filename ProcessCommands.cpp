@@ -3,6 +3,7 @@
 #include "msggenerator.h"
 #include <stdio.h>
 #include <SoftwareSerial.h>
+#include "mySPRINTF.h"
 
 static AudioToneGen *ATGen;
 static MorseChar *morseChar;
@@ -13,10 +14,6 @@ static CWcommUDP *commUDP;
 extern SoftwareSerial SwSerial;
 MsgUtil msgUtil;
 
-extern char sSprintf[];
-#define SPRINTF(FMT, args...) \
-  sprintf(sSprintf, FMT, args); \
-  Serial.print(sSprintf);
 
 /*---------------------------------------------------------------------------*/
 void ProcessRestartAnnounce(uint8_t numTones) {

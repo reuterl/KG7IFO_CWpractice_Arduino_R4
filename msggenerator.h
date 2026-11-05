@@ -14,10 +14,8 @@
 #include "SerialWaveType.h"
 #include "CmmdCode.h"
 #include "MorseSymbol.h"
+#include "mySPRINTF.h"
 
-#define SPRINTF(FMT, args...) \
-  sprintf(sSprintf, FMT, args); \
-  Serial.print(sSprintf);
 
 class MsgUtil {
 protected:
